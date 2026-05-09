@@ -1,14 +1,10 @@
-/**
- * Supabase テーブルの型定義 (DDL から手書き)。
- *
- * 将来的には `supabase gen types typescript` で自動生成に切り替える。
- * 現時点では DDL ファイル `supabase/migrations/0001_initial_schema.sql` を正本として
- * 手書きで同期する。DDL を変更したらこのファイルも更新すること。
- *
- * Supabase TypeScript 規約:
- *   - Row: SELECT 結果の型
- *   - Insert: INSERT 時の型 (DEFAULT 値があるカラムは Optional)
- *   - Update: UPDATE 時の型 (全カラム Optional)
+﻿/**
+ * Supabase 繝・・繝悶Ν縺ｮ蝙句ｮ夂ｾｩ (DDL 縺九ｉ謇区嶌縺・縲・ *
+ * 蟆・擂逧・↓縺ｯ `supabase gen types typescript` 縺ｧ閾ｪ蜍慕函謌舌↓蛻・ｊ譖ｿ縺医ｋ縲・ * 迴ｾ譎らせ縺ｧ縺ｯ DDL 繝輔ぃ繧､繝ｫ `supabase/migrations/0001_initial_schema.sql` 繧呈ｭ｣譛ｬ縺ｨ縺励※
+ * 謇区嶌縺阪〒蜷梧悄縺吶ｋ縲・DL 繧貞､画峩縺励◆繧峨％縺ｮ繝輔ぃ繧､繝ｫ繧よ峩譁ｰ縺吶ｋ縺薙→縲・ *
+ * Supabase TypeScript 隕冗ｴ・
+ *   - Row: SELECT 邨先棡縺ｮ蝙・ *   - Insert: INSERT 譎ゅ・蝙・(DEFAULT 蛟､縺後≠繧九き繝ｩ繝縺ｯ Optional)
+ *   - Update: UPDATE 譎ゅ・蝙・(蜈ｨ繧ｫ繝ｩ繝 Optional)
  */
 
 export type Json =
@@ -46,6 +42,7 @@ export interface Database {
           created_at?: string;
           updated_at?: string;
         };
+        Relationships: [];
       };
       household_members: {
         Row: {
@@ -69,6 +66,7 @@ export interface Database {
           role_in_household?: RoleInHousehold;
           joined_at?: string;
         };
+        Relationships: [];
       };
       members: {
         Row: {
@@ -110,6 +108,7 @@ export interface Database {
           created_at?: string;
           updated_at?: string;
         };
+        Relationships: [];
       };
       lessons: {
         Row: {
@@ -145,6 +144,7 @@ export interface Database {
           created_at?: string;
           updated_at?: string;
         };
+        Relationships: [];
       };
       schedules: {
         Row: {
@@ -180,6 +180,7 @@ export interface Database {
           created_at?: string;
           updated_at?: string;
         };
+        Relationships: [];
       };
       items: {
         Row: {
@@ -206,6 +207,7 @@ export interface Database {
           created_at?: string;
           updated_at?: string;
         };
+        Relationships: [];
       };
       schedule_item_checks: {
         Row: {
@@ -241,6 +243,7 @@ export interface Database {
           created_at?: string;
           updated_at?: string;
         };
+        Relationships: [];
       };
       household_invitations: {
         Row: {
@@ -276,6 +279,7 @@ export interface Database {
           created_by?: string;
           created_at?: string;
         };
+        Relationships: [];
       };
       payments: {
         Row: {
@@ -308,6 +312,7 @@ export interface Database {
           created_at?: string;
           updated_at?: string;
         };
+        Relationships: [];
       };
       notification_preferences: {
         Row: {
@@ -352,6 +357,7 @@ export interface Database {
           created_at?: string;
           updated_at?: string;
         };
+        Relationships: [];
       };
     };
     Views: Record<string, never>;
@@ -360,7 +366,7 @@ export interface Database {
   };
 }
 
-/** よく使うショートカット */
+/** 繧医￥菴ｿ縺・す繝ｧ繝ｼ繝医き繝・ヨ */
 export type Tables<T extends keyof Database['public']['Tables']> =
   Database['public']['Tables'][T]['Row'];
 export type InsertTables<T extends keyof Database['public']['Tables']> =
