@@ -5,12 +5,13 @@
  * 参照: 02_設計/技術メモ-GitHub Pages運用手順.md §2.1, §2.3
  *      02_設計/mobile-engineer引継ぎサマリ.md §5.5
  *
- * 社長の GitHub アカウント / リポジトリ名が確定したら、下記プレースホルダを置換する。
- * 暫定値: GITHUB_USER = '<github-username>', REPO = 'lesson-app'
+ * 確定値:
+ *   GITHUB_USER = 'ueno-miraikousou' (2026-05-10 社長アカウント作成完了)
+ *   REPO        = 'lesson-app'       (リポジトリ名、社長作業待ち)
  */
 
-const GITHUB_USER = '<github-username>'; // 社長アカウント確定時に置換
-const REPO = 'lesson-app'; // GitHub リポジトリ名確定時に置換
+const GITHUB_USER = 'ueno-miraikousou';
+const REPO = 'lesson-app';
 
 const PAGES_BASE = `https://${GITHUB_USER}.github.io/${REPO}` as const;
 
