@@ -1,0 +1,67 @@
+# 習い事管理アプリ — .gitignore
+# 参照: 02_設計/mobile-engineer依頼書.md §5.2 (環境変数管理)
+
+# ── 依存・ビルド ──
+node_modules/
+.expo/
+dist/
+web-build/
+.next/
+
+# ── 機密情報（絶対コミットしない） ──
+.env
+.env.local
+.env.*.local
+.env.production
+.env.preview
+
+# Supabase ローカル設定
+.supabase/
+supabase/.branches/
+supabase/.temp/
+
+# EAS / Expo
+*.jks
+*.p12
+*.key
+*.mobileprovision
+*.orig.*
+GoogleService-Info.plist
+google-services.json
+
+# ── ネイティブビルド成果物 ──
+android/.gradle/
+android/app/build/
+android/build/
+android/local.properties
+ios/build/
+ios/Pods/
+ios/*.xcworkspace/
+ios/DerivedData/
+
+# ── エディタ・OS ──
+.vscode/
+.idea/
+*.swp
+*.swo
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# ── ログ ──
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+npm-install.log
+*.log
+
+# ── テスト・カバレッジ ──
+coverage/
+*.lcov
+.nyc_output/
+
+# ── TypeScript ──
+*.tsbuildinfo
+
+# ── Sentry ──
+.sentryclirc
