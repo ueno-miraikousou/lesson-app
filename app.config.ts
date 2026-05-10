@@ -74,6 +74,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     ],
     'expo-asset',
     'expo-secure-store',
+    '@react-native-community/datetimepicker',
     [
       'expo-notifications',
       {

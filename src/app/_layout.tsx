@@ -31,6 +31,7 @@ function AuthGate() {
     const inWizardGroup = segments[0] === '(wizard)';
     const inMainGroup = segments[0] === '(main)';
     const inShareGroup = segments[0] === 'share';
+    const inOnboardingGroup = segments[0] === 'onboarding';
 
     switch (route.kind) {
       case 'login':
@@ -41,10 +42,12 @@ function AuthGate() {
         if (!inAuthGroup && !inShareGroup) router.replace('/(auth)/household-select');
         break;
       case 'wizard':
-        if (!inWizardGroup) router.replace('/(wizard)/intro');
+        // onboarding/notification-permission は wizard 完了直後の許可フローなので滞在許可
+        if (!inWizardGroup && !inOnboardingGroup) router.replace('/(wizard)/intro');
         break;
       case 'main':
-        if (!inMainGroup) router.replace('/(main)/calendar');
+        // onboarding を経由してメインへ向かう途中の状態を許容
+        if (!inMainGroup && !inOnboardingGroup) router.replace('/(main)/calendar');
         break;
     }
   }, [route.kind, isHydrating, segments, router]);

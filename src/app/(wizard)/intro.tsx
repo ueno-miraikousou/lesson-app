@@ -79,8 +79,7 @@ export default function WizardIntroScreen() {
 
   function handleStart() {
     setStep('step1-children-count');
-    // フェーズB で /(wizard)/step1 等を実装後にここをルーティング。
-    // 現状はストアの currentStep を進めるだけのスケルトン状態。
+    router.push('/(wizard)/step1');
   }
 
   function handleSkip() {
