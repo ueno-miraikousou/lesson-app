@@ -23,7 +23,11 @@ export function ScreenContainer({
   padded = true,
 }: ScreenContainerProps) {
   return (
-    <SafeAreaView className="flex-1 bg-background" edges={['top', 'left', 'right']}>
+    <SafeAreaView
+      className="flex-1 bg-background"
+      style={{ flex: 1, backgroundColor: '#FFF8F5' }}
+      edges={['top', 'left', 'right']}
+    >
       <KeyboardAvoidingView
         className="flex-1"
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
