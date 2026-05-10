@@ -41,8 +41,6 @@
   "include": [
     "src/**/*",
     "app.config.ts",
-    "expo-env.d.ts",
-    ".expo/types/**/*.ts",
     "nativewind-env.d.ts"
   ],
   "exclude": [

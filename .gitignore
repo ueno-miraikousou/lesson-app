@@ -30,14 +30,12 @@ GoogleService-Info.plist
 google-services.json
 
 # ── ネイティブビルド成果物 ──
-android/.gradle/
-android/app/build/
-android/build/
-android/local.properties
-ios/build/
-ios/Pods/
-ios/*.xcworkspace/
-ios/DerivedData/
+# expo prebuild 生成物。再現可能なので git 管理外。
+# Windows 固有のローカル編集 (android.overridePathCheck=true 等) は
+# 別途 docs に手順化予定。
+android/
+ios/
+
 
 # ── エディタ・OS ──
 .vscode/
@@ -54,6 +52,11 @@ yarn-debug.log*
 yarn-error.log*
 npm-install.log
 *.log
+*.err
+
+# ── 検証アーティファクト (一時) ──
+screenshot-*.png
+uihierarchy*.xml
 
 # ── テスト・カバレッジ ──
 coverage/

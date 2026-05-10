@@ -29,19 +29,10 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
   userInterfaceStyle: 'light', // MVP第1弾はライトモードのみ (デザインシステム §11)
   newArchEnabled: true,        // ADR-001 v0.4 New Architecture 有効化
   jsEngine: 'hermes',
-  icon: './assets/icon.png',
-  splash: {
-    image: './assets/splash.png',
-    resizeMode: 'contain',
-    backgroundColor: '#FFF8F5', // デザインシステム background
-  },
+  // icon / splash / adaptiveIcon: assets 準備後に有効化 (現状は Expo デフォルト)
   assetBundlePatterns: ['**/*'],
   android: {
     package: ANDROID_APPLICATION_ID,
-    adaptiveIcon: {
-      foregroundImage: './assets/adaptive-icon.png',
-      backgroundColor: '#FFF8F5',
-    },
     permissions: [
       'NOTIFICATIONS',
       'POST_NOTIFICATIONS',
