@@ -22,18 +22,27 @@ import { resolveAuthRoute, useAuthStore } from '../stores/auth-store';
 function AuthGate() {
   const router = useRouter();
   const segments = useSegments();
+  // Inline selector returns a stable primitive (string), avoiding the infinite render loop
+  // that resolveAuthRoute caused by returning a fresh { kind } object on every call.
+  const routeKind = useAuthStore((s) => {
+    if (!s.session) return 'login' as const;
+    if (!s.householdId) return 'household-select' as const;
+    if (!s.wizardCompleted) return 'wizard' as const;
+    return 'main' as const;
+  });
   const isHydrating = useAuthStore((s) => s.isHydrating);
-  const route = useAuthStore(resolveAuthRoute);
+  // useSegments returns a fresh array per call; collapse to a stable string for deps.
+  const topSegment = segments[0] ?? '';
 
   useEffect(() => {
     if (isHydrating) return;
-    const inAuthGroup = segments[0] === '(auth)';
-    const inWizardGroup = segments[0] === '(wizard)';
-    const inMainGroup = segments[0] === '(main)';
-    const inShareGroup = segments[0] === 'share';
-    const inOnboardingGroup = segments[0] === 'onboarding';
+    const inAuthGroup = topSegment === '(auth)';
+    const inWizardGroup = topSegment === '(wizard)';
+    const inMainGroup = topSegment === '(main)';
+    const inShareGroup = topSegment === 'share';
+    const inOnboardingGroup = topSegment === 'onboarding';
 
-    switch (route.kind) {
+    switch (routeKind) {
       case 'login':
         if (!inAuthGroup) router.replace('/(auth)/login');
         break;
@@ -50,7 +59,7 @@ function AuthGate() {
         if (!inMainGroup && !inOnboardingGroup) router.replace('/(main)/calendar');
         break;
     }
-  }, [route.kind, isHydrating, segments, router]);
+  }, [routeKind, isHydrating, topSegment, router]);
 
   return null;
 }
@@ -72,8 +81,8 @@ function RootContent() {
   }
   return (
     <>
-      <AuthGate />
       <Stack screenOptions={{ headerShown: false }} />
+      <AuthGate />
     </>
   );
 }
