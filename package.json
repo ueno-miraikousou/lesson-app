@@ -3,6 +3,7 @@
   "version": "0.1.0",
   "main": "expo-router/entry",
   "scripts": {
+    "postinstall": "patch-package",
     "start": "expo start",
     "android": "expo run:android",
     "ios": "expo run:ios",
@@ -47,7 +48,6 @@
     "react-native-screens": "~4.4.0",
     "react-native-svg": "15.8.0",
     "react-native-url-polyfill": "^2.0.0",
-    "react-native-worklets": "^0.5.0",
     "rrule": "^2.8.1",
     "tailwindcss": "^3.4.14",
     "zustand": "^5.0.1"
@@ -61,6 +61,8 @@
     "eslint-config-expo": "^8.0.1",
     "eslint-plugin-react": "^7.37.2",
     "eslint-plugin-react-hooks": "^5.0.0",
+    "patch-package": "^8.0.1",
+    "postinstall-postinstall": "^2.1.0",
     "prettier": "^3.3.3",
     "typescript": "~5.6.3"
   },
