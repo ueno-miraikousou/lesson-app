@@ -326,6 +326,7 @@ export interface Database {
           skip_when_all_items_checked: boolean;
           lock_screen_privacy_mode: boolean;
           sound_enabled: boolean;
+          celebration_sound_enabled: boolean;
           created_at: string;
           updated_at: string;
         };
@@ -340,6 +341,7 @@ export interface Database {
           skip_when_all_items_checked?: boolean;
           lock_screen_privacy_mode?: boolean;
           sound_enabled?: boolean;
+          celebration_sound_enabled?: boolean;
           created_at?: string;
           updated_at?: string;
         };
@@ -354,6 +356,7 @@ export interface Database {
           skip_when_all_items_checked?: boolean;
           lock_screen_privacy_mode?: boolean;
           sound_enabled?: boolean;
+          celebration_sound_enabled?: boolean;
           created_at?: string;
           updated_at?: string;
         };
