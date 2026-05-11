@@ -6,6 +6,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { PrimaryButton } from '../ui/PrimaryButton';
 import { TextField } from '../ui/TextField';
+import { LESSON_PRESETS } from '../../features/wizard/lesson-presets';
 import { tempId } from '../../lib/id';
 import type { WizardLesson, WizardScheduleSlot } from '../../stores/wizard-store';
 
@@ -15,6 +16,14 @@ export interface LessonFormSheetProps {
   memberId: string; // memberTempId
   memberName: string;
   initialValues?: Partial<WizardLesson>;
+  /**
+   * Called before commit to check whether the candidate lesson collides with
+   * an existing one (same name + same day(s) + same start time on the same
+   * member). When the callback returns true the form rejects the submit and
+   * shows an inline error, so the user must either tweak the schedule or
+   * delete the conflicting entry.
+   */
+  isDuplicate?: (candidate: WizardLesson) => boolean;
   onSubmit: (lesson: WizardLesson) => void;
   onClose: () => void;
 }
@@ -31,18 +40,9 @@ const DAYS: ReadonlyArray<{ value: DayOfWeek; label: string }> = [
   { value: 'SA', label: '土' },
 ];
 
-const SUGGESTIONS = [
-  '🏊 スイミング',
-  '🎹 ピアノ',
-  '⚽ サッカー',
-  '📕 英会話',
-  '🥋 空手',
-  '📐 そろばん',
-  '🎨 絵画',
-  '✍ 書道',
-  '🩰 バレエ',
-  '🤸 体操',
-] as const;
+// Suggestion list lives in `features/wizard/lesson-presets` (single source of truth).
+// Using the imported LESSON_PRESETS here keeps the chip labels and the
+// downstream emoji-by-name lookup in sync.
 
 /**
  * LessonFormSheet — 習い事入力フォーム。
@@ -58,6 +58,7 @@ export function LessonFormSheet({
   memberId,
   memberName,
   initialValues,
+  isDuplicate,
   onSubmit,
   onClose,
 }: LessonFormSheetProps) {
@@ -83,10 +84,10 @@ export function LessonFormSheet({
     setDays((prev) => (prev.includes(d) ? prev.filter((x) => x !== d) : [...prev, d]));
   }
 
-  function applySuggestion(s: string) {
-    // 絵文字 + スペース + 名前 → 名前のみ取り出し
-    const match = s.match(/^[^\s]+\s+(.+)$/);
-    setName(match?.[1] ?? s);
+  function applyPresetName(presetName: string) {
+    // Only the user-visible name is stored. The emoji is recomputed at render
+    // time via lookupLessonEmoji(name), so the saved record stays portable.
+    setName(presetName);
   }
 
   function parseTimeToDate(t: string): Date {
@@ -131,6 +132,12 @@ export function LessonFormSheet({
       location: location.trim() || null,
       schedules: [slot],
     };
+
+    if (isDuplicate?.(lesson)) {
+      setError('同じ習い事を同じ曜日・同じ開始時刻ですでに登録しています');
+      return;
+    }
+
     onSubmit(lesson);
   }
 
@@ -172,14 +179,27 @@ export function LessonFormSheet({
           />
 
           <Text className="mb-2 text-caption text-text-secondary">よく選ばれる習い事</Text>
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} className="mb-4 -mx-1">
-            {SUGGESTIONS.map((s) => (
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            className="mb-4 -mx-1"
+            accessibilityRole="list"
+          >
+            {LESSON_PRESETS.map((preset) => (
               <Pressable
-                key={s}
-                onPress={() => applySuggestion(s)}
-                className="mx-1 rounded-button border border-border bg-surface px-3 py-2 active:bg-primary-light"
+                key={preset.name}
+                onPress={() => applyPresetName(preset.name)}
+                className="mx-1 flex-row items-center rounded-button border border-border bg-surface px-3 py-2 active:bg-primary-light"
+                accessibilityRole="button"
+                accessibilityLabel={preset.name}
+                accessibilityHint="このサジェストを名前欄に適用します"
               >
-                <Text className="text-body text-text-primary">{s}</Text>
+                {/* Emoji is decorative — hide from screen readers so they read
+                    only the meaningful name ("スイミング", not "🏊 スイミング"). */}
+                <Text accessibilityElementsHidden importantForAccessibility="no" className="text-body">
+                  {preset.emoji}
+                </Text>
+                <Text className="ml-1 text-body text-text-primary">{preset.name}</Text>
               </Pressable>
             ))}
           </ScrollView>
