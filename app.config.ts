@@ -57,6 +57,10 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     },
   },
   plugins: [
+    // Windows ビルド設定永続化（自作 config plugins、先頭で走らせる）
+    // 関連: 02_設計/Windows ビルド設定の永続化方針.md v0.2
+    './plugins/withCustomGradleProperties',
+    './plugins/withLocalProperties',
     [
       'expo-router',
       {
