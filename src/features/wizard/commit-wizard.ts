@@ -14,11 +14,8 @@
  */
 
 import { supabase } from '../../lib/supabase';
-import type {
-  WizardLesson,
-  WizardMember,
-  WizardScheduleSlot,
-} from '../../stores/wizard-store';
+import type { WizardLesson, WizardMember } from '../../stores/wizard-store';
+import { buildRecurrenceRule, combineDateTime, nextOccurrenceStart } from './recurrence';
 
 const OPERATOR_TEMP_ID = 'operator';
 
@@ -31,53 +28,6 @@ interface CommitInput {
 interface CommitResult {
   insertedMemberIds: ReadonlyArray<string>;
   insertedLessonIds: ReadonlyArray<string>;
-}
-
-/** 曜日 → RFC 5545 RRULE 文字列 */
-function buildRecurrenceRule(slot: WizardScheduleSlot): string | null {
-  if (slot.daysOfWeek.length === 0) return null;
-  return `FREQ=WEEKLY;BYDAY=${slot.daysOfWeek.join(',')}`;
-}
-
-/**
- * 「次の月曜日の HH:mm」のような、繰り返し予定の最初の発生日時を計算する。
- * 簡易実装: 今週内で対象曜日があればその日、なければ来週の最初の対象曜日。
- */
-function nextOccurrenceStart(slot: WizardScheduleSlot, now: Date = new Date()): Date {
-  const dayMap: Record<string, number> = { SU: 0, MO: 1, TU: 2, WE: 3, TH: 4, FR: 5, SA: 6 };
-  const targetDays = slot.daysOfWeek.map((d) => dayMap[d]).filter((n): n is number => n != null);
-  if (targetDays.length === 0) return now;
-
-  const today = now.getDay();
-  const sortedTargets = [...targetDays].sort((a, b) => a - b);
-  let offset = 7;
-  for (const t of sortedTargets) {
-    const diff = (t - today + 7) % 7;
-    if (diff < offset) offset = diff;
-  }
-  if (offset === 0) {
-    // 今日が対象曜日 → 開始時刻が過ぎていれば翌週、未来なら今日
-    const [h = 0, m = 0] = slot.startTime.split(':').map((n) => parseInt(n, 10));
-    const candidate = new Date(now);
-    candidate.setHours(h, m, 0, 0);
-    if (candidate <= now) {
-      offset = 7;
-    } else {
-      return candidate;
-    }
-  }
-  const [h = 0, m = 0] = slot.startTime.split(':').map((n) => parseInt(n, 10));
-  const result = new Date(now);
-  result.setDate(result.getDate() + offset);
-  result.setHours(h, m, 0, 0);
-  return result;
-}
-
-function combineDateTime(date: Date, hhmm: string): Date {
-  const [h = 0, m = 0] = hhmm.split(':').map((n) => parseInt(n, 10));
-  const result = new Date(date);
-  result.setHours(h, m, 0, 0);
-  return result;
 }
 
 /**

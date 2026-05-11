@@ -56,6 +56,7 @@ npm-install.log
 
 # ── 検証アーティファクト (一時) ──
 screenshot-*.png
+screenshots/
 uihierarchy*.xml
 
 # ── テスト・カバレッジ ──
