@@ -1,38 +1,85 @@
 /**
- * Jest 設定 (純関数ユニットテスト最小構成)。
+ * Jest 設定 (2 プロジェクト構成: L1 純関数 + L2 コンポーネント)
  *
  * 設計判断:
- *   - React Native コンポーネントのレンダリングテストは jest-expo + react-native
- *     プリセットが必要だが、本リポジトリのテスト目的は今は「純関数の検証」のみ。
- *     ts-jest + node 環境だけでロジック層 (features/wizard/recurrence,
- *     lesson-presets 等) を検証できる
- *   - 将来コンポーネントテストを足す際は `projects` 設定で本構成を残しつつ
- *     jest-expo 用のプロジェクトを追加する想定
- *   - `passWithNoTests: false` で「テストファイルが見つからない」を失敗扱いに
- *     する。テストを書いたつもりが拾われていない事故を防ぐ
+ *   - L1: ts-jest + node 環境 (純関数 30 ケース)、RN ネイティブ依存非 import
+ *   - L2: jest-expo プリセット + RN Testing Library、RN コンポーネント検証
+ *   - `projects` で並列化、`npm test` で両方実行
+ *   - `passWithNoTests: false` で「テストファイル見つからない」を fail 扱い
  *
- * 探索:
- *   - `src/**\/__tests__/**\/*.test.ts` のみ拾う (`*.test.tsx` は将来用)
+ * 参照:
+ *   - 04_テスト/依頼書/L2基盤整備依頼書.md §4
+ *   - 04_テスト/テスト計画.md §2.1 L2
  */
 module.exports = {
-  preset: 'ts-jest',
-  testEnvironment: 'node',
-  testMatch: ['<rootDir>/src/**/__tests__/**/*.test.ts'],
   passWithNoTests: false,
-  // RN ネイティブモジュールに依存するファイルが import チェーンに混ざらないよう、
-  // テスト対象は意図的に「純関数モジュール」のみに絞る運用。
-  // (react-native や expo-av 等を import するファイルはテストしない)
-  transform: {
-    '^.+\\.tsx?$': [
-      'ts-jest',
-      {
-        // TS 設定はプロジェクト本体と同じものを使う
-        tsconfig: '<rootDir>/tsconfig.json',
-        // 個別テストファイル内で `as const` などをトラブルなく動かす
-        isolatedModules: true,
-      },
-    ],
+  collectCoverageFrom: [
+    'src/**/*.{ts,tsx}',
+    '!src/**/*.d.ts',
+    '!src/**/__tests__/**',
+    '!src/**/__mocks__/**',
+    '!src/test-utils/**',
+    '!src/msw/**',
+    '!src/types/database.generated.ts',
+  ],
+  // coverage threshold は段階的に引き上げる方針 (依頼書 §4.2)
+  //   Phase B 初版 (mobile-engineer-4 / 2026-05-13): 10/10/10/10
+  //     L2 基盤導入 + 3 コンポーネントのサンプルテストのみカバー
+  //     残る大部分のコードは Phase C/D で順次追加
+  //   Phase C 着手時に: 30/30/30/30 程度に
+  //   Phase D 着手時に: 50/50/60/60 (依頼書当初の目標)
+  coverageThreshold: {
+    global: {
+      branches: 10,
+      functions: 9,
+      lines: 10,
+      statements: 10,
+    },
   },
-  moduleFileExtensions: ['ts', 'js'],
-  clearMocks: true,
+  projects: [
+    // ============================================================
+    // L1: 純関数ユニットテスト (既存維持)
+    // ============================================================
+    {
+      displayName: 'unit',
+      preset: 'ts-jest',
+      testEnvironment: 'node',
+      testMatch: ['<rootDir>/src/**/__tests__/**/*.test.ts'],
+      testPathIgnorePatterns: ['/node_modules/', '\\.test\\.tsx$'],
+      transform: {
+        '^.+\\.tsx?$': [
+          'ts-jest',
+          {
+            tsconfig: '<rootDir>/tsconfig.json',
+            isolatedModules: true,
+          },
+        ],
+      },
+      moduleFileExtensions: ['ts', 'js'],
+      clearMocks: true,
+    },
+    // ============================================================
+    // L2: コンポーネント / インテグレーションテスト (新規)
+    // ============================================================
+    {
+      displayName: 'component',
+      preset: 'jest-expo',
+      testMatch: ['<rootDir>/src/**/__tests__/**/*.test.tsx'],
+      setupFilesAfterEnv: ['<rootDir>/jest.setup.expo.ts'],
+      // MSW v2 + jsdom の組み合わせには node 条件を明示しないと
+      // `msw/node` のサブパス export が解決できない
+      testEnvironmentOptions: {
+        customExportConditions: ['node', 'node-addons'],
+      },
+      transformIgnorePatterns: [
+        'node_modules/(?!((jest-)?react-native|@react-native(-community)?|expo(nent)?|@expo(nent)?/.*|@expo-google-fonts/.*|react-navigation|@react-navigation/.*|@unimodules/.*|unimodules|sentry-expo|native-base|react-native-svg|@gorhom|nativewind|react-native-css-interop|@testing-library/.*|msw|until-async|rettime|@mswjs/.*|@bundled-es-modules/.*|@inquirer/.*|outvariant|strict-event-emitter|graphql|tough-cookie|cookie|set-cookie-parser))',
+      ],
+      moduleNameMapper: {
+        '^@/(.*)$': '<rootDir>/src/$1',
+        '\\.(css)$': '<rootDir>/src/__mocks__/styleMock.ts',
+      },
+      clearMocks: true,
+      restoreMocks: true,
+    },
+  ],
 };

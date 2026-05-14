@@ -1,0 +1,46 @@
+appId: com.miraikousou.lessonapp
+name: Wizard skip-through to capture complete + main screens
+---
+# bypass build で起動 → wizard intro 表示状態から開始
+# 各 step を最小操作で skip → complete (紙吹雪) → main (calendar) まで進む
+- launchApp:
+    clearState: false
+    stopApp: false
+- waitForAnimationToEnd:
+    timeout: 5000
+# intro でスキップを tap
+- tapOn:
+    text: "スキップ"
+    optional: true
+- waitForAnimationToEnd:
+    timeout: 3000
+# step4 まで来てたら「なし、または後で」を tap
+- tapOn:
+    text: "なし、または後で"
+    optional: true
+- waitForAnimationToEnd:
+    timeout: 3000
+# 同じ画面が他にもあるかもしれないので何回か skip
+- tapOn:
+    text: "なし、または後で"
+    optional: true
+- waitForAnimationToEnd:
+    timeout: 3000
+- tapOn:
+    text: "次へ"
+    optional: true
+- waitForAnimationToEnd:
+    timeout: 3000
+- tapOn:
+    text: "完了"
+    optional: true
+- waitForAnimationToEnd:
+    timeout: 3000
+- tapOn:
+    text: "登録する"
+    optional: true
+- waitForAnimationToEnd:
+    timeout: 5000
+# complete 画面まで来てたら screenshot
+- takeScreenshot:
+    path: maestro_wizard_complete

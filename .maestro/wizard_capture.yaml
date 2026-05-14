@@ -1,0 +1,21 @@
+appId: com.miraikousou.lessonapp
+name: Phase B wizard capture (AUTH_BYPASS mode)
+---
+# Phase B 完全達成: AUTH_BYPASS で wizard 画面 + 紙吹雪 + 一覧 screenshot 取得
+# 作成: mobile-engineer-3, 2026-05-12
+# 前提: EXPO_PUBLIC_AUTH_BYPASS=true でビルドされた APK が install 済
+#       bypass で wizard intro 画面に直行する設計
+#
+# 撮影目標:
+#   05_wizard_intro.png      = wizard イントロ (始めるボタン表示)
+#   05_wizard_celebration.png = WIZ-09 紙吹雪 (deep link で直接 complete 画面)
+#   06_lessons_list.png      = (任意) 一覧画面 (wizard 完了後)
+
+- launchApp:
+    clearState: false
+    stopApp: true
+
+# 起動直後の wizard intro 画面
+- waitForAnimationToEnd:
+    timeout: 5000
+- takeScreenshot: screenshots/maestro_intro

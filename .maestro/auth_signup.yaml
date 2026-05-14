@@ -1,0 +1,35 @@
+appId: com.miraikousou.lessonapp
+name: AUTH-04 signup with test account
+---
+# Phase B 完全達成: AUTH-04 → signup → wizard 取得
+# 作成: mobile-engineer-3, 2026-05-12
+# test アカウント: test_phaseb_20260512@miraikousou.com
+- launchApp:
+    clearState: false
+    stopApp: true
+# 起動時 ログイン画面が表示される想定
+- assertVisible: "ログイン"
+- assertVisible: "新規登録"
+# 新規登録 link を tap
+- tapOn: "新規登録"
+# アカウント作成画面が表示される想定
+- assertVisible: "アカウントを作成"
+# メールアドレス入力欄を tap
+- tapOn:
+    id: "email"
+    text: "メールアドレス"
+    optional: true
+- inputText: "test_phaseb_20260512@miraikousou.com"
+# パスワード入力欄を tap
+- tapOn:
+    id: "password"
+    text: "パスワード"
+    optional: true
+- inputText: "TestPass123"
+# 登録ボタンを tap
+- tapOn: "登録"
+# 登録成功 → ウィザード画面 or ホーム画面遷移を期待
+- waitForAnimationToEnd:
+    timeout: 10000
+- takeScreenshot:
+    path: ../screenshots/maestro_post_signup
