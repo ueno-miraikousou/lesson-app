@@ -83,6 +83,10 @@ team_lead_*.md
 qa_proof_*.md
 proof_*.md
 blocker_*.md
+# 5/14 Phase C Sprint 0-5 進行中の agent 間通信 (session-only)
+architect5_*.md
+architect5*.md
+me5_*.md
 
 # 5/14 秘書 #1 追加: Chrome 経由 SQL 実行用 base64 アーティファクト + メモリドラフト
 *.sql.b64

@@ -23,8 +23,17 @@ import { useAuthStore } from '../stores/auth-store';
  */
 const AUTH_BYPASS_ENABLED = process.env.EXPO_PUBLIC_AUTH_BYPASS === 'true';
 
-const MOCK_USER_ID = 'mock-user-phaseb-20260512';
-const MOCK_HOUSEHOLD_ID = 'mock-household-phaseb-20260512';
+// ME-5 2026-05-14 (#34M 対策): Supabase の UUID 検証で parse error にならないよう
+// UUID v4 形式の固定値を使う (Phase B では非 UUID 文字列で Supabase parse error 発生)。
+// 本番ビルドでは AUTH_BYPASS_ENABLED=false で参照されないため、固定 UUID で影響ゼロ。
+const MOCK_USER_ID = '00000000-0000-4000-8000-000000000001';
+const MOCK_HOUSEHOLD_ID = '00000000-0000-4000-8000-000000000002';
+
+/** ME-5 2026-05-14: CalendarScreen から AUTH_BYPASS 状態を参照する用 */
+export const AUTH_BYPASS_MOCK_HOUSEHOLD_ID = MOCK_HOUSEHOLD_ID;
+export function isAuthBypassEnabled(): boolean {
+  return AUTH_BYPASS_ENABLED;
+}
 
 function buildMockSession(): Session {
   const nowSec = Math.floor(Date.now() / 1000);
