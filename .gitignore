@@ -8,12 +8,26 @@ dist/
 web-build/
 .next/
 
+# ── テスト出力 ──
+coverage/
+
 # ── 機密情報（絶対コミットしない） ──
 .env
 .env.local
 .env.*.local
 .env.production
 .env.preview
+
+# Supabase dev 環境 + RLS テスト用 (architect-3 + qa SEC-RLS scripts で使用)
+.env.qa
+.env.qa.*
+.env.dev
+.env.dev.*
+.tokens-qa.json
+.test-data.json
+sec-rls-scripts/.env.qa
+sec-rls-scripts/.tokens-qa.json
+sec-rls-scripts/.test-data.json
 
 # Supabase ローカル設定
 .supabase/
@@ -58,6 +72,21 @@ npm-install.log
 screenshot-*.png
 screenshots/
 uihierarchy*.xml
+maestro_*.png
+
+# ── セッション通信用 (session-only、エージェント間の一時的やり取り) ──
+# 秘書 ↔ エージェント の状態同期・判断記録・進捗証拠等。次セッションには引き継がない。
+# 重要情報は final_report_*.md / 会話メモ.md / 04_テスト/社長戻り時_QA報告.md に統合する運用。
+decision_*.md
+status_*.md
+team_lead_*.md
+qa_proof_*.md
+proof_*.md
+blocker_*.md
+
+# 5/14 秘書 #1 追加: Chrome 経由 SQL 実行用 base64 アーティファクト + メモリドラフト
+*.sql.b64
+memory_drafts/
 
 # ── テスト・カバレッジ ──
 coverage/
