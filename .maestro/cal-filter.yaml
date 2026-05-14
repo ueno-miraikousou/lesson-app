@@ -1,0 +1,95 @@
+appId: com.miraikousou.lessonapp
+name: CAL-04 メンバーフィルタ + 永続化 (S-06)
+---
+# CAL-04 ボトムシートでメンバーフィルタ ON/OFF + AsyncStorage 永続化
+# 作成: qa-2, 2026-05-14
+# 対象 Sprint: Sprint 3 (C3-T02〜T03、C3-T05)
+#
+# 前提:
+#   - AUTH_BYPASS=true、CAL-01 到達済、メンバー 2 人以上
+#
+# 注意:
+#   - フィルタ状態は AsyncStorage で再起動後保持
+#   - 全員 OFF 時 EMPTY-01 表示 + 「全員表示」CTA
+#   - クライアント側フィルタ、DB クエリ追加なし
+#
+# 撮影目標:
+#   01_initial.png         = フィルタ button 表示
+#   02_sheet_open.png      = CAL-04 ボトムシート展開
+#   03_chip_off.png        = チップ OFF (1 人除外)
+#   04_filtered.png        = フィルタ適用後カレンダー
+#   05_show_all.png        = 「全員表示」復元
+#   06_hide_all.png        = 「全員解除」+ EMPTY 表示
+#
+# 検証項目:
+#   - AC1: フィルタ button tap で CAL-04 起動
+#   - AC2: メンバーチップ表示 (色 + 名前)
+#   - AC3: 「全員 / 全員解除」クイックアクション
+#   - AC4: 即時フィルタ反映 < 100ms
+#   - AC5: AsyncStorage 永続化 (再起動 verify は scope 外、jest L2 で確認)
+
+- launchApp:
+    clearState: false
+    stopApp: true
+
+- waitForAnimationToEnd:
+    timeout: 5000
+
+# AC1: フィルタ button
+- assertVisible:
+    id: "calendar-filter-open"
+- takeScreenshot:
+    path: ../screenshots/maestro_cal_filter_01_initial
+
+- tapOn:
+    id: "calendar-filter-open"
+- waitForAnimationToEnd:
+    timeout: 1500
+
+# CAL-04 ボトムシート
+- assertVisible:
+    id: "member-filter-sheet"
+- takeScreenshot:
+    path: ../screenshots/maestro_cal_filter_02_sheet_open
+
+# AC2: チップ 1 人目 tap (OFF)
+- tapOn:
+    id: "member-filter-chip-.*"
+- waitForAnimationToEnd:
+    timeout: 500
+- takeScreenshot:
+    path: ../screenshots/maestro_cal_filter_03_chip_off
+
+# AC3: 「全員解除」
+- tapOn:
+    id: "member-filter-hide-all"
+- waitForAnimationToEnd:
+    timeout: 1000
+
+# sheet 閉じる
+- tapOn:
+    id: "member-filter-close"
+- waitForAnimationToEnd:
+    timeout: 1000
+
+# AC4 後段: 「全員 OFF」状態でカレンダー (EMPTY 想定)
+- assertVisible:
+    id: "calendar-grid"
+- takeScreenshot:
+    path: ../screenshots/maestro_cal_filter_06_hide_all
+
+# 復元: filter 再 open + 全員 ON
+- tapOn:
+    id: "calendar-filter-open"
+- waitForAnimationToEnd:
+    timeout: 1500
+- tapOn:
+    id: "member-filter-show-all"
+- waitForAnimationToEnd:
+    timeout: 1000
+- tapOn:
+    id: "member-filter-close"
+- waitForAnimationToEnd:
+    timeout: 1000
+- takeScreenshot:
+    path: ../screenshots/maestro_cal_filter_05_show_all

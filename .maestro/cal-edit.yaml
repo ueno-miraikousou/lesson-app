@@ -1,0 +1,75 @@
+appId: com.miraikousou.lessonapp
+name: CAL-09 → CAL-05 編集モード (S-09)
+---
+# 予定 ActionSheet「編集」→ CAL-05 編集モード起動、編集後保存
+# 作成: qa-2, 2026-05-14
+# 対象 Sprint: Sprint 2 (C2-T03、C2-T06)
+#
+# 前提:
+#   - AUTH_BYPASS=true、CAL-01 + 当月予定 1 件以上 (cal-add-single.yaml 実行後 or seed)
+#   - 繰り返し予定の場合「今後すべて / すべて」分岐 (この日のみは MVP 範囲外、Phase D)
+#
+# 注意:
+#   - 編集モードで既存値プリフィル、validate は L2 jest で検証
+#   - schedule-action-edit-future は繰り返し予定時のみ表示
+#
+# 撮影目標:
+#   01_agenda.png          = アジェンダリスト
+#   02_action_sheet.png    = ActionSheet (詳細/編集/削除)
+#   03_edit_mode.png       = CAL-05 編集モード起動
+#   04_save.png            = 保存後カレンダー反映
+#
+# 検証項目:
+#   - AC1: CAL-09 (or ActionSheet)「編集」で CAL-05 編集モード起動 + プリフィル
+#   - AC2: 単発 + 繰り返し両対応
+#   - AC3: 繰り返し時「今後すべて / すべて」分岐
+#   - AC4: 保存で schedules UPDATE、updated_at 更新
+#   - AC5: バリデーション AC (L2 jest 検証)
+
+- launchApp:
+    clearState: false
+    stopApp: true
+
+- waitForAnimationToEnd:
+    timeout: 5000
+
+# AC: アジェンダの初予定 tap
+- assertVisible:
+    id: "calendar-agenda-list"
+- takeScreenshot:
+    path: ../screenshots/maestro_cal_edit_01_agenda
+
+# 初の agenda-item を tap (動的 id ターゲット、index 0)
+- tapOn:
+    id: "agenda-item-.*"
+- waitForAnimationToEnd:
+    timeout: 1500
+
+# ActionSheet 表示
+- assertVisible:
+    id: "schedule-action-sheet"
+- takeScreenshot:
+    path: ../screenshots/maestro_cal_edit_02_action_sheet
+
+# AC1: 編集タップ (単発時 edit-all、繰り返し時も edit-all 優先)
+- tapOn:
+    id: "schedule-action-edit-all"
+- waitForAnimationToEnd:
+    timeout: 2000
+
+# CAL-05 編集モード起動 (既存値プリフィル)
+- assertVisible:
+    id: "schedule-form-header"
+- takeScreenshot:
+    path: ../screenshots/maestro_cal_edit_03_edit_mode
+
+# AC4: 保存 (実際の編集は inputText 不可のため、既存値で再保存)
+- tapOn:
+    id: "schedule-form-submit"
+- waitForAnimationToEnd:
+    timeout: 3000
+
+- assertVisible:
+    id: "calendar-grid"
+- takeScreenshot:
+    path: ../screenshots/maestro_cal_edit_04_save

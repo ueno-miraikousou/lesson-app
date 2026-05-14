@@ -1,0 +1,133 @@
+appId: com.miraikousou.lessonapp
+name: CAL-09 予定詳細 + 持ち物チェック (I-02 / I-03)
+---
+# 予定 tap → ActionSheet「詳細を見る」→ CAL-09 → 持ち物チェック + 一括 check/uncheck
+# 作成: qa-2, 2026-05-14
+# 対象 Sprint: Sprint 5 (C5-T01〜T03、C5-T05)
+#
+# 前提:
+#   - AUTH_BYPASS=true、当月予定 1 件以上 + 該当 lesson に items 1 件以上
+#   - schedule_item_checks 3-key UPSERT (schedule_id + item_id + occurrence_date)
+#
+# 注意:
+#   - 朝動線の主動線、社長中間レビュー対象
+#   - occurrence_date 別に独立チェック保持
+#   - bulk check/uncheck は loop UPSERT (MVP)
+#
+# 撮影目標:
+#   01_agenda.png          = アジェンダ
+#   02_action_sheet.png    = ActionSheet
+#   03_detail.png          = ScheduleDetailScreen 上部 (タイトル + 場所 + メモ)
+#   04_items_list.png      = 持ち物セクション (チェックボックス + 名前)
+#   05_check_one.png       = 1 件チェック後 (ストライクスルー)
+#   06_check_all.png       = 「全部チェック」適用後
+#   07_uncheck_all.png     = 「全部解除」復元
+#
+# 検証項目:
+#   - I-02 AC1: 予定 tap → CAL-09 遷移
+#   - I-02 AC2-3: 詳細 + 持ち物セクション + items 取得
+#   - I-02 AC5: 「持ち物リストを編集」CTA
+#   - I-03 AC1: チェックボックス表示
+#   - I-03 AC2: 3-key UPSERT
+#   - I-03 AC4: チェック済ストライクスルー
+#   - I-03 AC5: bulk action
+
+- launchApp:
+    clearState: false
+    stopApp: true
+
+- waitForAnimationToEnd:
+    timeout: 5000
+
+# 初期アジェンダ
+- assertVisible:
+    id: "calendar-agenda-list"
+- takeScreenshot:
+    path: ../screenshots/maestro_cal_detail_check_01_agenda
+
+# 初予定 tap
+- tapOn:
+    id: "agenda-item-.*"
+- waitForAnimationToEnd:
+    timeout: 1500
+
+# ActionSheet
+- assertVisible:
+    id: "schedule-action-sheet"
+- takeScreenshot:
+    path: ../screenshots/maestro_cal_detail_check_02_action_sheet
+
+# I-02 AC1: 「詳細を見る」tap
+- tapOn:
+    id: "schedule-action-detail"
+- waitForAnimationToEnd:
+    timeout: 2000
+
+# CAL-09 詳細表示
+- assertVisible:
+    id: "schedule-detail-header"
+- assertVisible:
+    id: "schedule-detail-body"
+- assertVisible:
+    id: "schedule-detail-title"
+- takeScreenshot:
+    path: ../screenshots/maestro_cal_detail_check_03_detail
+
+# I-02 AC2-3: 持ち物セクション
+- runFlow:
+    when:
+      visible:
+        id: "schedule-detail-items-list"
+    commands:
+      - takeScreenshot:
+          path: ../screenshots/maestro_cal_detail_check_04_items_list
+
+      # I-03 AC1-2: 初 item チェック tap (UPSERT trigger)
+      - tapOn:
+          id: "schedule-detail-check-.*"
+      - waitForAnimationToEnd:
+          timeout: 500
+      - takeScreenshot:
+          path: ../screenshots/maestro_cal_detail_check_05_check_one
+
+      # I-03 AC5: bulk 「全部チェック」
+      - assertVisible:
+          id: "schedule-detail-bulk"
+      - tapOn:
+          id: "schedule-detail-check-all"
+      - waitForAnimationToEnd:
+          timeout: 1000
+      - takeScreenshot:
+          path: ../screenshots/maestro_cal_detail_check_06_check_all
+
+      # bulk 「全部解除」(復元)
+      - tapOn:
+          id: "schedule-detail-uncheck-all"
+      - waitForAnimationToEnd:
+          timeout: 1000
+      - takeScreenshot:
+          path: ../screenshots/maestro_cal_detail_check_07_uncheck_all
+
+# I-02 AC5: 持ち物リスト編集 CTA (items 0 件時 / 通常時両方)
+- runFlow:
+    when:
+      visible:
+        id: "schedule-detail-edit-items"
+    commands:
+      - assertVisible:
+          id: "schedule-detail-edit-items"
+- runFlow:
+    when:
+      visible:
+        id: "schedule-detail-items-empty"
+    commands:
+      - assertVisible:
+          id: "schedule-detail-items-register"
+
+# 戻る
+- tapOn:
+    id: "schedule-detail-back"
+- waitForAnimationToEnd:
+    timeout: 1500
+- assertVisible:
+    id: "calendar-grid"

@@ -1,0 +1,90 @@
+appId: com.miraikousou.lessonapp
+name: CAL-06 削除 + Undo (S-10)
+---
+# 予定 ActionSheet「削除」→ 確認ダイアログ → 削除 → Undo トースト 10 秒以内に復元
+# 作成: qa-2, 2026-05-14
+# 対象 Sprint: Sprint 2 (C2-T04、C2-T06)
+#
+# 前提:
+#   - AUTH_BYPASS=true、CAL-01 + 当月予定 1 件以上
+#   - Undo トーストは 10 秒以内、過ぎたら復元不可
+#
+# 注意:
+#   - 単発予定: 「削除しますか?」→ OK で DELETE
+#   - 繰り返し予定: 「今後すべて / すべて」3 択 (MVP は 2 択)
+#   - CASCADE DELETE: 関連 schedule_item_checks も同時削除
+#
+# 撮影目標:
+#   01_agenda.png          = アジェンダリスト初期
+#   02_action_sheet.png    = ActionSheet 表示
+#   03_confirm.png         = 確認ダイアログ
+#   04_deleted.png         = 削除後 + Undo トースト
+#   05_undo.png            = Undo タップ後復元
+#
+# 検証項目:
+#   - AC1: ActionSheet「削除」→ 確認ダイアログ起動
+#   - AC2: 単発削除 (DELETE)
+#   - AC3: 繰り返し「今後すべて / すべて」分岐 (本 YAML は単発)
+#   - AC4: CASCADE DELETE (検証は SEC-1 / RLS test)
+#   - AC5: Undo トースト 10 秒以内に元に戻せる
+
+- launchApp:
+    clearState: false
+    stopApp: true
+
+- waitForAnimationToEnd:
+    timeout: 5000
+
+# 初期アジェンダ
+- assertVisible:
+    id: "calendar-agenda-list"
+- takeScreenshot:
+    path: ../screenshots/maestro_cal_delete_undo_01_agenda
+
+# 初予定 tap
+- tapOn:
+    id: "agenda-item-.*"
+- waitForAnimationToEnd:
+    timeout: 1500
+
+# ActionSheet
+- assertVisible:
+    id: "schedule-action-sheet"
+- takeScreenshot:
+    path: ../screenshots/maestro_cal_delete_undo_02_action_sheet
+
+# AC1: 削除 tap
+- tapOn:
+    id: "schedule-action-delete"
+- waitForAnimationToEnd:
+    timeout: 1500
+
+# AC1: 確認ダイアログ
+- assertVisible:
+    id: "schedule-delete-confirm"
+- takeScreenshot:
+    path: ../screenshots/maestro_cal_delete_undo_03_confirm
+
+# AC2: 「削除」確定 tap (single は delete-confirm-all、繰り返しでも all OK)
+- tapOn:
+    id: "schedule-delete-confirm-all"
+- waitForAnimationToEnd:
+    timeout: 2000
+
+# AC5: Undo トースト 10 秒以内表示
+- assertVisible:
+    id: "undo-toast"
+- takeScreenshot:
+    path: ../screenshots/maestro_cal_delete_undo_04_deleted
+
+# AC5: Undo tap で復元
+- tapOn:
+    id: "undo-toast-action"
+- waitForAnimationToEnd:
+    timeout: 2000
+
+# 復元後カレンダー
+- assertVisible:
+    id: "calendar-grid"
+- takeScreenshot:
+    path: ../screenshots/maestro_cal_delete_undo_05_undo

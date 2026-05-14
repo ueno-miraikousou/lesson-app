@@ -1,0 +1,98 @@
+appId: com.miraikousou.lessonapp
+name: CAL-05 単発予定追加 (S-07)
+---
+# CAL-05 予定フォームで単発予定を作成、AC1-AC6 を E2E 検証
+# 作成: qa-2, 2026-05-14
+# 対象 Sprint: Sprint 1 (C1-T04、C1-T06)
+#
+# 前提:
+#   - AUTH_BYPASS=true、CAL-01 到達済、習い事 1 件以上登録済 (wizard 完了済)
+#   - inputText 使用不可 (#11/#12) → タイトル入力は schedule-form の placeholder 検証で代替
+#
+# 注意:
+#   - 単発のみ: 繰り返しトグル OFF
+#   - 学習事項 #18M-#23M / #36M (rrule.js UTC) 継承、TZ 検証は cal-recurrence.yaml で
+#
+# 撮影目標:
+#   01_fab.png             = FAB (+) ボタン表示
+#   02_form_open.png       = CAL-05 フォーム展開
+#   03_lesson_select.png   = 習い事選択 chip
+#   04_date_picker.png     = 日付 + 開始 + 終了
+#   05_submit.png          = 保存ボタン (recurrence OFF)
+#   06_reflected.png       = カレンダー戻り、新予定反映
+#
+# 検証項目:
+#   - AC1: FAB or 日付セル長押しで CAL-05 起動
+#   - AC2-3: タイトル空エラー / 終了<開始エラー (本 YAML は正常系のみ、エラー系は L2 jest)
+#   - AC4: 保存で schedules INSERT (lesson_id 紐付)
+#   - AC5: 保存後カレンダー反映 < 1 秒
+#   - AC6: 失敗時トースト (本 YAML は正常系)
+
+- launchApp:
+    clearState: false
+    stopApp: true
+
+- waitForAnimationToEnd:
+    timeout: 5000
+
+# AC1: FAB tap
+- assertVisible:
+    id: "calendar-fab"
+- takeScreenshot:
+    path: ../screenshots/maestro_cal_add_single_01_fab
+- tapOn:
+    id: "calendar-fab"
+- waitForAnimationToEnd:
+    timeout: 2000
+
+# AC1: CAL-05 フォーム表示
+- assertVisible:
+    id: "schedule-form-header"
+- takeScreenshot:
+    path: ../screenshots/maestro_cal_add_single_02_form_open
+
+# AC2: 習い事 (lesson) 選択 - 初の lesson chip を tap
+- runFlow:
+    when:
+      visible:
+        id: "schedule-form-lesson-list"
+    commands:
+      - takeScreenshot:
+          path: ../screenshots/maestro_cal_add_single_03_lesson_select
+- runFlow:
+    when:
+      notVisible:
+        id: "schedule-form-lesson-list"
+    commands:
+      - assertVisible:
+          id: "schedule-form-no-lessons"
+
+# AC4: 日付 + 開始 + 終了 field
+- assertVisible:
+    id: "schedule-form-date"
+- assertVisible:
+    id: "schedule-form-start"
+- assertVisible:
+    id: "schedule-form-end"
+- takeScreenshot:
+    path: ../screenshots/maestro_cal_add_single_04_date_picker
+
+# 繰り返しトグル OFF 確認 (単発)
+- assertVisible:
+    id: "schedule-form-recurrence-switch"
+
+# AC4: 「保存」tap (単発 schedules INSERT)
+- assertVisible:
+    id: "schedule-form-submit"
+- takeScreenshot:
+    path: ../screenshots/maestro_cal_add_single_05_submit
+- tapOn:
+    id: "schedule-form-submit"
+- waitForAnimationToEnd:
+    timeout: 3000
+
+# AC5: カレンダー戻り、新規予定がアジェンダに表示
+- assertVisible:
+    id: "calendar-grid"
+- takeScreenshot:
+    path: ../screenshots/maestro_cal_add_single_06_reflected

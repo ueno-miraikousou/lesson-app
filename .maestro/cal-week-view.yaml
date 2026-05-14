@@ -1,0 +1,86 @@
+appId: com.miraikousou.lessonapp
+name: CAL-02 週表示 + Timeline (S-03)
+---
+# 月表示 → 週表示 toggle、Timeline mode で 7 日分の予定表示
+# 作成: qa-2, 2026-05-14
+# 対象 Sprint: Sprint 3 (C3-T01、C3-T05)
+#
+# 前提:
+#   - AUTH_BYPASS=true、CAL-01 到達済、当週予定複数件
+#   - react-native-calendars Timeline mode 採用 (ADR-004)
+#
+# 注意:
+#   - 24 時間跨ぎ予定は分割禁止 (MVP)
+#   - 同時刻 4 件以上は 3 列表示 + 「+N」マーク
+#   - 1 時間未満予定は最低高さ 24dp
+#
+# 撮影目標:
+#   01_month_initial.png   = 月表示初期
+#   02_toggle_tap.png      = toggle tap 直後
+#   03_week_view.png       = 週表示展開
+#   04_week_nav.png        = 前週/翌週 button
+#   05_week_swipe.png      = 左右 swipe 後
+#
+# 検証項目:
+#   - AC1: 月/週 toggle で CAL-02 切替
+#   - AC2: 当週 (日〜土) 縦軸タイムライン (6:00〜23:00)
+#   - AC3: 左右 swipe で前週/翌週遷移
+#   - AC4: メンバー色分け
+#   - AC5: 予定 tap で CAL-09 詳細遷移 (cal-detail-check.yaml で検証)
+
+- launchApp:
+    clearState: false
+    stopApp: true
+
+- waitForAnimationToEnd:
+    timeout: 5000
+
+# 月表示初期
+- assertVisible:
+    id: "calendar-grid"
+- takeScreenshot:
+    path: ../screenshots/maestro_cal_week_view_01_month_initial
+
+# AC1: toggle tap
+- assertVisible:
+    id: "calendar-view-toggle"
+- tapOn:
+    id: "calendar-view-toggle"
+- waitForAnimationToEnd:
+    timeout: 2000
+- takeScreenshot:
+    path: ../screenshots/maestro_cal_week_view_02_toggle_tap
+
+# AC2: 週表示展開 (calendar-week-body)
+- assertVisible:
+    id: "calendar-week-body"
+- takeScreenshot:
+    path: ../screenshots/maestro_cal_week_view_03_week_view
+
+# AC3: 週ナビ
+- assertVisible:
+    id: "week-nav"
+- assertVisible:
+    id: "week-nav-prev"
+- assertVisible:
+    id: "week-nav-next"
+- takeScreenshot:
+    path: ../screenshots/maestro_cal_week_view_04_week_nav
+
+# AC3: 翌週遷移
+- tapOn:
+    id: "week-nav-next"
+- waitForAnimationToEnd:
+    timeout: 1500
+- assertVisible:
+    id: "calendar-week-body"
+- takeScreenshot:
+    path: ../screenshots/maestro_cal_week_view_05_week_swipe
+
+# 月表示に戻す (回帰)
+- tapOn:
+    id: "calendar-view-toggle"
+- waitForAnimationToEnd:
+    timeout: 1500
+- assertVisible:
+    id: "calendar-grid"

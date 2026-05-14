@@ -1,0 +1,120 @@
+appId: com.miraikousou.lessonapp
+name: WIZ-10 後からウィザード再実行 (W-10)
+---
+# CalendarScreen「家族を追加」→ WIZ-10 (mode=add) 起動 → 既存メンバー保持で追加実行
+# 作成: qa-2, 2026-05-14
+# 対象 Sprint: Sprint 6 (C6-T01、C6-T04)
+#
+# 前提:
+#   - AUTH_BYPASS=true、wizard 完了済 (既存メンバー 1 人以上 / 習い事 0+)
+#   - ADR-006 Accepted: commitWizardAddMode + useExistingHouseholdData + mode=add 分岐
+#
+# 注意:
+#   - 単一 zustand persist key 運用 (ME-5 §5.1 判断、intro 入る時 clearWizard)
+#   - mode='add' は AddModeBadge 表示 / 既存サマリ / step4 自動 skip
+#   - inputText 不可 → 子供追加は step1 「+」 button で人数のみ操作
+#
+# 撮影目標:
+#   01_calendar.png        = CalendarScreen 下部 actions
+#   02_intro_add.png       = WIZ-10 intro (mode=add) + AddModeBadge + 既存サマリ
+#   03_step1_add.png       = step1 (現在 N 人登録済) + + button
+#   04_step2_add.png       = step2 (mode=add banner + 既存名 hint)
+#   05_step3_add.png       = step3 (mode=add banner)
+#   06_step5_add.png       = step5 (mode=add banner、step4 skip 後)
+#   07_summary_add.png     = summary (追加 / 既存 分離表示)
+#   08_complete_add.png    = complete (mode=add 専用文言)
+#
+# 検証項目:
+#   - AC1: CalendarScreen「家族を追加」→ /(wizard)/intro?mode=add
+#   - AC2: AddModeBadge 表示
+#   - AC3: WIZ-01 「現在 N 人登録済」
+#   - AC4: 追加分のみ INSERT (既存非変更)
+#   - AC5: complete 後 calendar 戻り、新規追加分反映
+
+- launchApp:
+    clearState: false
+    stopApp: true
+
+- waitForAnimationToEnd:
+    timeout: 5000
+
+# AC1: CalendarScreen bottom actions
+- assertVisible:
+    id: "calendar-bottom-actions"
+- assertVisible:
+    id: "calendar-action-wizard-add"
+- takeScreenshot:
+    path: ../screenshots/maestro_wiz_rerun_01_calendar
+
+# AC1: 「家族を追加」tap → WIZ-10
+- tapOn:
+    id: "calendar-action-wizard-add"
+- waitForAnimationToEnd:
+    timeout: 2500
+
+# AC2: WIZ-10 intro (mode=add)
+- assertVisible:
+    id: "wiz-add-mode-badge"
+- assertVisible:
+    id: "wiz-add-mode-title"
+- takeScreenshot:
+    path: ../screenshots/maestro_wiz_rerun_02_intro_add
+
+# 既存サマリ表示確認 (loading or summary)
+- runFlow:
+    when:
+      visible:
+        id: "wiz-add-mode-existing-summary"
+    commands:
+      - assertVisible:
+          id: "wiz-add-mode-existing-summary"
+- runFlow:
+    when:
+      visible:
+        id: "wiz-add-mode-loading"
+    commands:
+      - waitForAnimationToEnd:
+          timeout: 3000
+
+# 「子供を追加」tap → step1
+- tapOn:
+    id: "wiz-add-mode-start-children"
+- waitForAnimationToEnd:
+    timeout: 2000
+
+# AC3: step1 (mode=add banner + 現在 N 人 + + button)
+- assertVisible:
+    id: "wiz-add-mode-banner-step1"
+- assertVisible:
+    id: "wiz-add-mode-existing-children"
+- assertVisible:
+    id: "wiz-step1-count"
+- takeScreenshot:
+    path: ../screenshots/maestro_wiz_rerun_03_step1_add
+
+# 1 人追加 (+ button)
+- tapOn:
+    id: "wiz-step1-quick-1"
+- waitForAnimationToEnd:
+    timeout: 800
+
+# 「次へ」tap
+- tapOn:
+    id: "wiz-step1-next"
+- waitForAnimationToEnd:
+    timeout: 2000
+
+# step2 (mode=add banner)
+- assertVisible:
+    id: "wiz-add-mode-banner-step2"
+- takeScreenshot:
+    path: ../screenshots/maestro_wiz_rerun_04_step2_add
+
+# step2/3 は MemberFormSheet が必要だが、inputText 不可なため
+# step3 移行は実機検証 (Metro #37M 解決後) で確認
+# 本 YAML は banner 検証で停止
+- takeScreenshot:
+    path: ../screenshots/maestro_wiz_rerun_05_step3_add_placeholder
+
+# 期待値: 通常完了後 calendar に戻り、新規追加メンバーが反映
+# (実機検証は #37M 解決後)

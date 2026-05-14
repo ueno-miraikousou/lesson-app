@@ -1,0 +1,101 @@
+appId: com.miraikousou.lessonapp
+name: CAL-05 繰り返し予定 (RRULE) 作成 (S-08)
+---
+# CAL-05 繰り返しトグル ON + 曜日複数選択 + 終了日設定で繰り返し予定作成
+# 作成: qa-2, 2026-05-14
+# 対象 Sprint: Sprint 2 (C2-T01〜T02、C2-T06)
+#
+# 前提:
+#   - AUTH_BYPASS=true、CAL-01 到達済、習い事 1 件以上登録済
+#   - rrule.js v2 UTC 強制 (#36M) 学習事項継承、Asia/Tokyo TZ 固定
+#
+# 注意:
+#   - MVP は「毎週 + 複数曜日 + 同時刻」のみ、毎月/カスタムは UI 非実装または disabled
+#   - 終了日 (recurrence_until) は「終了日なし」「特定日まで」の 2 モード
+#   - DST 非対応 (日本国内 MVP)
+#
+# 撮影目標:
+#   01_form_open.png       = CAL-05 フォーム
+#   02_recurrence_on.png   = 繰り返しトグル ON 後の panel 展開
+#   03_days_selected.png   = 曜日複数選択 (月 + 木)
+#   04_until_set.png       = 終了日設定 (or 終了日なし)
+#   05_description.png     = 「毎週月曜と木曜...」自然言語表示
+#   06_submit.png          = 保存 (schedules.recurrence_rule に RRULE 文字列)
+#   07_reflected.png       = カレンダー戻り、複数日にドット展開
+#
+# 検証項目:
+#   - AC1: 繰り返しトグル ON で RRULE panel 出現
+#   - AC2: 曜日複数選択 (月 + 木) 動作
+#   - AC3: 終了日設定 (本 YAML は終了日なし optional)
+#   - AC4: RFC 5545 形式で保存 (検証は L1 jest)
+#   - AC5: 月表示で複数セルに展開描画
+
+- launchApp:
+    clearState: false
+    stopApp: true
+
+- waitForAnimationToEnd:
+    timeout: 5000
+
+# FAB → form
+- tapOn:
+    id: "calendar-fab"
+- waitForAnimationToEnd:
+    timeout: 2000
+- assertVisible:
+    id: "schedule-form-header"
+- takeScreenshot:
+    path: ../screenshots/maestro_cal_recurrence_01_form_open
+
+# AC1: 繰り返しトグル ON
+- tapOn:
+    id: "schedule-form-recurrence-switch"
+- waitForAnimationToEnd:
+    timeout: 1000
+- assertVisible:
+    id: "schedule-form-recurrence-panel"
+- takeScreenshot:
+    path: ../screenshots/maestro_cal_recurrence_02_recurrence_on
+
+# AC2: 月曜選択 (id: schedule-form-recurrence-day-MO)
+- tapOn:
+    id: "schedule-form-recurrence-day-MO"
+- waitForAnimationToEnd:
+    timeout: 500
+
+# AC2: 木曜選択 (id: schedule-form-recurrence-day-TH)
+- tapOn:
+    id: "schedule-form-recurrence-day-TH"
+- waitForAnimationToEnd:
+    timeout: 500
+- takeScreenshot:
+    path: ../screenshots/maestro_cal_recurrence_03_days_selected
+
+# AC3: 終了日 field (optional 設定、本 YAML は確認のみ)
+- assertVisible:
+    id: "schedule-form-recurrence-until"
+- takeScreenshot:
+    path: ../screenshots/maestro_cal_recurrence_04_until_set
+
+# AC5 (前段): 自然言語化 description 表示
+- runFlow:
+    when:
+      visible:
+        id: "schedule-form-recurrence-description"
+    commands:
+      - takeScreenshot:
+          path: ../screenshots/maestro_cal_recurrence_05_description
+
+# AC4: 保存
+- tapOn:
+    id: "schedule-form-submit"
+- waitForAnimationToEnd:
+    timeout: 3000
+- takeScreenshot:
+    path: ../screenshots/maestro_cal_recurrence_06_submit
+
+# AC5: カレンダー反映
+- assertVisible:
+    id: "calendar-grid"
+- takeScreenshot:
+    path: ../screenshots/maestro_cal_recurrence_07_reflected

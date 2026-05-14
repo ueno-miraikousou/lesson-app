@@ -1,0 +1,134 @@
+appId: com.miraikousou.lessonapp
+name: MEM-03 プロフィール編集 (C-01)
+---
+# CalendarScreen「プロフィール」→ MEM-03 → 名前 + 色 + 保存 → カレンダー反映
+# 作成: qa-2, 2026-05-14
+# 対象 Sprint: Sprint 6 (C6-T02、C6-T04)
+#
+# 前提:
+#   - AUTH_BYPASS=true、operator (parent ロール) メンバー 1 人以上
+#
+# 注意:
+#   - 名前 1-20 文字必須、inputText 不可のため本 YAML は name field 表示確認 + 色変更で代替
+#   - 役割 parent 固定 (グレー表示、編集不可)
+#   - 色 8 色 + 同色回避警告 (ColorPickerSheet)
+#
+# 撮影目標:
+#   01_calendar.png        = CalendarScreen 下部 actions
+#   02_profile_initial.png = MEM-03 初期 (プリフィル)
+#   03_name_input.png      = 名前 input + role 表示
+#   04_color_picker.png    = ColorPickerSheet 全 8 色チップ
+#   05_color_selected.png  = 色 chip 選択後 + 「選択中の色」
+#   06_color_conflict.png  = 同色重複警告 (もし他メンバー同色)
+#   07_save.png            = 保存 button tap
+#   08_back_calendar.png   = カレンダー戻り、色反映
+#
+# 検証項目:
+#   - AC1: CalendarScreen「プロフィール」→ /(main)/profile
+#   - AC2: 名前 + 色のみ編集、role=parent 固定
+#   - AC3: メール表示のみ (Phase D CTA グレー)
+#   - AC4: 保存で members UPDATE + invalidateQueries
+#   - AC5: 名前 1-20 文字 validation (本 YAML は scope 外、L2 jest)
+
+- launchApp:
+    clearState: false
+    stopApp: true
+
+- waitForAnimationToEnd:
+    timeout: 5000
+
+# AC1: CalendarScreen bottom actions
+- assertVisible:
+    id: "calendar-action-profile"
+- takeScreenshot:
+    path: ../screenshots/maestro_profile_edit_01_calendar
+
+- tapOn:
+    id: "calendar-action-profile"
+- waitForAnimationToEnd:
+    timeout: 2000
+
+# MEM-03 初期
+- assertVisible:
+    id: "profile-edit-header"
+- takeScreenshot:
+    path: ../screenshots/maestro_profile_edit_02_profile_initial
+
+# AC2: 名前 input + role + avatar
+- assertVisible:
+    id: "profile-edit-avatar"
+- assertVisible:
+    id: "profile-edit-name-input"
+- assertVisible:
+    id: "profile-edit-role"
+- takeScreenshot:
+    path: ../screenshots/maestro_profile_edit_03_name_input
+
+# AC3: メール表示 (Phase D CTA)
+- assertVisible:
+    id: "profile-edit-email"
+
+# AC2: ColorPickerSheet (8 色 + 選択中表示)
+- assertVisible:
+    id: "color-picker-sheet"
+- takeScreenshot:
+    path: ../screenshots/maestro_profile_edit_04_color_picker
+
+# 初の color chip tap (8 色のうち 1 色)
+- tapOn:
+    id: "color-picker-chip-.*"
+- waitForAnimationToEnd:
+    timeout: 500
+
+# 「選択中の色」label 表示
+- assertVisible:
+    id: "color-picker-selected"
+- takeScreenshot:
+    path: ../screenshots/maestro_profile_edit_05_color_selected
+
+# 同色重複警告 (もしあれば、optional)
+- runFlow:
+    when:
+      visible:
+        id: "color-picker-conflict-warning"
+    commands:
+      - takeScreenshot:
+          path: ../screenshots/maestro_profile_edit_06_color_conflict
+
+# AC4: 保存 button tap
+- assertVisible:
+    id: "profile-edit-save"
+- takeScreenshot:
+    path: ../screenshots/maestro_profile_edit_07_save
+- tapOn:
+    id: "profile-edit-save"
+- waitForAnimationToEnd:
+    timeout: 2500
+
+# 保存 toast 表示 (optional)
+- runFlow:
+    when:
+      visible:
+        id: "profile-edit-toast"
+    commands:
+      - assertVisible:
+          id: "profile-edit-toast"
+
+# AC4: カレンダー戻り、新規色反映 (もし auto-back する設計なら)
+# 設計次第で profile-edit-back tap 経由
+- runFlow:
+    when:
+      visible:
+        id: "profile-edit-back"
+    commands:
+      - tapOn:
+          id: "profile-edit-back"
+      - waitForAnimationToEnd:
+          timeout: 1500
+- runFlow:
+    when:
+      visible:
+        id: "calendar-grid"
+    commands:
+      - takeScreenshot:
+          path: ../screenshots/maestro_profile_edit_08_back_calendar

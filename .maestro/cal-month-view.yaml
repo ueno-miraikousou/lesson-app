@@ -1,0 +1,104 @@
+appId: com.miraikousou.lessonapp
+name: CAL-01 月表示 + メンバー色分け + 月切替 + 今日に戻る (S-01/S-02/S-05)
+---
+# CAL-01 月表示の AC1-AC6 を E2E 検証
+# 作成: qa-2, 2026-05-14
+# 対象 Sprint: Sprint 1 (C1-T01〜T03、C1-T06)
+#
+# 前提:
+#   - AUTH_BYPASS=true でビルドされた APK (intro / wizard 完了済セッション)
+#   - 初期 dev データ: members 2-4 人 + schedules 当月複数件
+#   - もしくは前 YAML (wizard_celebration.yaml) からの継続で /(main)/calendar 到達済
+#
+# 注意 (学習事項 #14M-#23M / #20A 継承):
+#   - inputText は使用不可、tap navigation のみ
+#   - react-native-calendars 月表示は agenda + grid 切替式
+#   - 月切替アニメーションは waitForAnimationToEnd で待機 (500ms 以内 AC)
+#
+# 撮影目標:
+#   01_initial.png         = 当月月表示 (今日セル強調 + 予定ドット)
+#   02_today_header.png    = ヘッダの「今日に戻る」表示
+#   03_filter_button.png   = フィルタ button 表示確認
+#   04_view_toggle.png     = 月/週切替 button 表示
+#   05_agenda_list.png     = 当月予定リスト (色分けドット)
+#   06_empty_day.png       = 予定 0 件日のタップ動作
+#
+# 検証項目:
+#   - AC1: 起動時 or タブタップで CAL-01 描画
+#   - AC2: 当月予定が開始日セルにドット/バー表示
+#   - AC3: 親 + 子 フラット表示 (フィルタなし時全件)
+#   - AC4: スワイプ or 矢印で前月/翌月遷移、予定再取得
+#   - AC5: 「今日」セル視覚強調 + 「今日に戻る」ヘッダアクション
+#   - AC6: 当月 0 件時 EMPTY-01 「最初の予定を追加」CTA
+
+- launchApp:
+    clearState: false
+    stopApp: true
+
+- waitForAnimationToEnd:
+    timeout: 5000
+
+# CAL-01 月表示初期状態
+- assertVisible:
+    id: "calendar-header"
+- assertVisible:
+    id: "calendar-grid"
+- takeScreenshot:
+    path: ../screenshots/maestro_cal_month_view_01_initial
+
+# AC5: 「今日に戻る」button (calendar-go-today)
+- assertVisible:
+    id: "calendar-go-today"
+- takeScreenshot:
+    path: ../screenshots/maestro_cal_month_view_02_today_header
+
+# AC6: フィルタ button
+- assertVisible:
+    id: "calendar-filter-open"
+- takeScreenshot:
+    path: ../screenshots/maestro_cal_month_view_03_filter_button
+
+# 月/週切替 toggle
+- assertVisible:
+    id: "calendar-view-toggle"
+- takeScreenshot:
+    path: ../screenshots/maestro_cal_month_view_04_view_toggle
+
+# AC2/AC3: 当月予定アジェンダリスト or empty
+- assertVisible:
+    id: "calendar-agenda"
+- runFlow:
+    when:
+      visible:
+        id: "calendar-agenda-list"
+    commands:
+      - takeScreenshot:
+          path: ../screenshots/maestro_cal_month_view_05_agenda_list
+- runFlow:
+    when:
+      visible:
+        id: "calendar-empty-month"
+    commands:
+      - takeScreenshot:
+          path: ../screenshots/maestro_cal_month_view_06_empty_day
+
+# AC4: 月切替動作 (左右 swipe or grid 上 tap)
+# react-native-calendars の標準ヘッダ矢印 tap (>) は agenda ヘッダ内
+# Phase C 実装の挙動に合わせて optional 化、失敗時も後続継続
+- swipe:
+    direction: LEFT
+    duration: 400
+- waitForAnimationToEnd:
+    timeout: 1000
+
+# AC5: 「今日に戻る」tap で当月帰還
+- tapOn:
+    id: "calendar-go-today"
+- waitForAnimationToEnd:
+    timeout: 1000
+- assertVisible:
+    id: "calendar-grid"
+
+# 仕上げ: 完了 screenshot
+- takeScreenshot:
+    path: ../screenshots/maestro_cal_month_view_07_final

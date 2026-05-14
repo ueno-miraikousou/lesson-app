@@ -1,0 +1,113 @@
+appId: com.miraikousou.lessonapp
+name: ITEM-01 持ち物リスト編集 (I-01 / I-06)
+---
+# ITEM-01 で習い事ごとの持ち物 CRUD + 並び替え
+# 作成: qa-2, 2026-05-14
+# 対象 Sprint: Sprint 4 (C4-T01〜T03、C4-T04)
+#
+# 前提:
+#   - AUTH_BYPASS=true、習い事 1 件以上登録済
+#   - MEM-04 (lessons-list) → MEM-06 (lesson-detail) → ITEM-01 への遷移経路
+#
+# 注意:
+#   - inputText 使用不可、アイテム追加は schedule-form 同様 placeholder 検証で代替
+#   - sort_order は dnd 並び替えでなく up/down button で操作
+#   - 同名アイテム警告は本 YAML 範囲外 (L2 jest 検証)
+#
+# 撮影目標:
+#   01_lessons_list.png    = MEM-04 一覧
+#   02_lesson_detail.png   = MEM-06 詳細 + 「持ち物リスト編集」CTA
+#   03_items_initial.png   = ITEM-01 初期 (empty or list)
+#   04_items_add.png       = 追加 input + button
+#   05_items_edit.png      = アイテム tap で edit モード
+#   06_items_reorder.png   = up/down button 並び替え
+#   07_items_delete.png    = 削除 button
+#
+# 検証項目:
+#   - AC1: MEM-04 → MEM-06 → ITEM-01 遷移
+#   - AC2: items テーブル CRUD UI
+#   - AC3: 「追加」button + name 必須 (本 YAML は button 表示確認のみ)
+#   - AC4: 編集モード + 並び替え (sort_order)
+#   - AC5: 楽観的更新 (失敗時 rollback、本 YAML は scope 外)
+
+- launchApp:
+    clearState: false
+    stopApp: true
+
+- waitForAnimationToEnd:
+    timeout: 5000
+
+# CalendarScreen から lessons へ (実装次第、calendar-action-* 配下 or deep link)
+# 実装上は calendar-action-* に lessons 入口がない可能性 → deep link or sample
+# 本 YAML は ITEM-01 到達後の検証主眼、前段は手動 / deep link assume
+
+# AC1: lessons-list (MEM-04)
+- runFlow:
+    when:
+      visible:
+        id: "lessons-list-header"
+    commands:
+      - takeScreenshot:
+          path: ../screenshots/maestro_cal_item_crud_01_lessons_list
+      - tapOn:
+          id: "lesson-card-.*"
+      - waitForAnimationToEnd:
+          timeout: 1500
+
+# AC1: lesson-detail (MEM-06)
+- runFlow:
+    when:
+      visible:
+        id: "lesson-detail-header"
+    commands:
+      - takeScreenshot:
+          path: ../screenshots/maestro_cal_item_crud_02_lesson_detail
+      - tapOn:
+          id: "lesson-detail-edit-items"
+      - waitForAnimationToEnd:
+          timeout: 1500
+
+# ITEM-01 到達
+- assertVisible:
+    id: "items-header"
+- takeScreenshot:
+    path: ../screenshots/maestro_cal_item_crud_03_items_initial
+
+# AC3: 追加 input + button
+- assertVisible:
+    id: "items-add-input"
+- assertVisible:
+    id: "items-add-button"
+- takeScreenshot:
+    path: ../screenshots/maestro_cal_item_crud_04_items_add
+
+# AC4: 既存 item があれば edit / reorder / delete
+- runFlow:
+    when:
+      visible:
+        id: "items-list"
+    commands:
+      - takeScreenshot:
+          path: ../screenshots/maestro_cal_item_crud_05_items_edit
+      # 初 item の up button tap (id pattern: item-move-up-XXXX)
+      - tapOn:
+          id: "item-move-up-.*"
+          optional: true
+      - waitForAnimationToEnd:
+          timeout: 500
+      - takeScreenshot:
+          path: ../screenshots/maestro_cal_item_crud_06_items_reorder
+      # 削除 button
+      - tapOn:
+          id: "item-delete-.*"
+          optional: true
+      - waitForAnimationToEnd:
+          timeout: 500
+      - takeScreenshot:
+          path: ../screenshots/maestro_cal_item_crud_07_items_delete
+
+# 戻る
+- tapOn:
+    id: "items-back"
+- waitForAnimationToEnd:
+    timeout: 1000
