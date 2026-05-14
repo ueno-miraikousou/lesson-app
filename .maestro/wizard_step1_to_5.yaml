@@ -1,0 +1,107 @@
+appId: com.miraikousou.lessonapp
+name: WIZ-01 ~ WIZ-05 子供 0 人ルート + 自身習い事スキップ (tap / navigation only)
+---
+# wizard step1 ~ step5 を tap navigation のみで遷移確認
+# 作成: qa-2, 2026-05-14
+#
+# 前提:
+#   - AUTH_BYPASS=true でビルドされた APK (wizard intro に直行する)
+#   - もしくは事前に signup 完了 + wizard 未完了状態のセッション
+#
+# 注意 (学習事項 #11 + #12 継承):
+#   - inputText は使用不可 → MemberFormSheet での子供情報入力は本 YAML scope 外
+#   - 本 YAML は「子供 0 人ルート」で step1 → step4 → step5 を覆う
+#   - 子供 1 人以上ルートは別 YAML (wizard_step6_to_9.yaml) で完了画面まで網羅
+#
+# 撮影目標:
+#   01_intro.png         = WIZ-00 価値訴求イントロ
+#   02_step1_default.png = WIZ-01 子供人数 (default 0 人)
+#   03_step1_choice.png  = 「0 人」クイック選択後
+#   04_step4_intro.png   = WIZ-04 自身習い事 (あり/なし 選択前)
+#   05_step4_skip.png    = 「なし、または後で」選択後の step5 遷移
+#   06_step5_default.png = WIZ-05 他メンバー追加画面
+#
+# 検証項目:
+#   - スワイプ可能なイントロスライド (左から「困りごと共感」→「価値提案」→「開始確認」)
+#   - 「はじめる」button で step1 遷移
+#   - step1 の ± / クイック選択 button 動作
+#   - 0 人ルート: step1 →「次へ」で step4 直接遷移
+#   - step4 の「なし、または後で」で step5 遷移
+#   - step5 から「次へ」(空状態) で summary 遷移
+
+- launchApp:
+    clearState: false
+    stopApp: true
+
+- waitForAnimationToEnd:
+    timeout: 5000
+
+# WIZ-00 イントロ画面
+- assertVisible: "1分で完成します"
+- assertVisible: "スキップ"
+- assertVisible: "次へ"
+- takeScreenshot:
+    path: ../screenshots/maestro_wizard_step1_to_5_01_intro
+
+# 「次へ」を 2 回 tap して 3 枚目のスライドへ
+- tapOn:
+    text: "次へ"
+- waitForAnimationToEnd:
+    timeout: 2000
+- tapOn:
+    text: "次へ"
+- waitForAnimationToEnd:
+    timeout: 2000
+- assertVisible: "はじめる"
+
+# 「はじめる」で step1 へ
+- tapOn:
+    text: "はじめる"
+- waitForAnimationToEnd:
+    timeout: 3000
+
+# WIZ-01 子供人数画面
+- assertVisible: "お子さんは何人いますか？"
+- assertVisible: "親本人だけの利用もできます"
+- assertVisible: "よく選ばれる選択肢"
+- takeScreenshot:
+    path: ../screenshots/maestro_wizard_step1_to_5_02_step1_default
+
+# 「0 人」クイック選択 tap (デフォルトでも 0 だが明示 tap)
+- tapOn:
+    text: "0人"
+- waitForAnimationToEnd:
+    timeout: 2000
+- assertVisible: "親本人だけの利用ですね"
+- takeScreenshot:
+    path: ../screenshots/maestro_wizard_step1_to_5_03_step1_choice
+
+# 「次へ」で step4 直接遷移 (子供 0 人 → step2/3 をスキップ)
+- tapOn:
+    text: "次へ"
+- waitForAnimationToEnd:
+    timeout: 3000
+
+# WIZ-04 自身習い事 (あり/なし 選択前)
+- assertVisible: "あなた自身の習い事は"
+- assertVisible: "✅ あり、登録する"
+- assertVisible: "⏭ なし、または後で"
+- takeScreenshot:
+    path: ../screenshots/maestro_wizard_step1_to_5_04_step4_intro
+
+# 「なし、または後で」で step5 遷移
+- tapOn:
+    text: "⏭ なし、または後で"
+- waitForAnimationToEnd:
+    timeout: 3000
+
+# WIZ-05 他メンバー追加画面
+- assertVisible: "他の家族メンバー"
+- assertVisible: "配偶者・祖父母などを登録できます"
+- assertVisible: "家族メンバーを追加"
+- assertVisible: "家族の招待はウィザード完了後にできます"
+- takeScreenshot:
+    path: ../screenshots/maestro_wizard_step1_to_5_05_step4_skip
+
+- takeScreenshot:
+    path: ../screenshots/maestro_wizard_step1_to_5_06_step5_default

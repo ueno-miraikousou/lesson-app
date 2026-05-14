@@ -10,7 +10,7 @@ import { StatusBar } from 'expo-status-bar';
 
 import { useAuthSession } from '../hooks/use-auth-session';
 import { queryClient } from '../lib/query-client';
-import { resolveAuthRoute, useAuthStore } from '../stores/auth-store';
+import { useAuthStore } from '../stores/auth-store';
 
 // Phase B QA bypass: ウィザード完了画面 (WIZ-09 紙吹雪 + 達成音) の screenshot 取得用。
 // 本番ビルドには影響しない (環境変数 OFF が default)。

@@ -61,7 +61,7 @@ export default function HouseholdSelectScreen() {
       setHouseholdId(household.id);
       // ガードがウィザードへリダイレクト
       router.replace('/');
-    } catch (e) {
+    } catch {
       Alert.alert(
         'エラー',
         '世帯の作成に失敗しました。ネットワーク接続を確認してから再度お試しください',

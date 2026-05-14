@@ -18,7 +18,7 @@ export interface MemberFormSheetProps {
   mode: MemberFormMode;
   initialValues?: Partial<WizardMember>;
   /** すでに使用中の色（重複回避のための表示用、任意） */
-  usedColors?: ReadonlyArray<string>;
+  usedColors?: readonly string[];
   /** ウィザードで使う場合の表示文脈 */
   wizardContext?: {
     currentIndex: number;
@@ -64,7 +64,7 @@ export function MemberFormSheet({
   );
   const [nameError, setNameError] = useState<string | undefined>();
 
-  function pickInitialColor(used: ReadonlyArray<string>): string {
+  function pickInitialColor(used: readonly string[]): string {
     const available = memberPalette.find((c) => !used.includes(c));
     return available ?? memberPalette[0];
   }
@@ -212,7 +212,7 @@ export function MemberFormSheet({
                   ['female', '女の子'],
                   ['male', '男の子'],
                   ['unspecified', '答えない'],
-                ] as ReadonlyArray<[MemberGender, string]>
+                ] as readonly [MemberGender, string][]
               ).map(([value, label]) => {
                 const selected = gender === value;
                 return (

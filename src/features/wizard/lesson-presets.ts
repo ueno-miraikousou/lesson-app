@@ -15,7 +15,7 @@ export interface LessonPreset {
   readonly name: string;
 }
 
-export const LESSON_PRESETS: ReadonlyArray<LessonPreset> = [
+export const LESSON_PRESETS: readonly LessonPreset[] = [
   { emoji: '🏊', name: 'スイミング' },
   { emoji: '🎹', name: 'ピアノ' },
   { emoji: '⚽', name: 'サッカー' },

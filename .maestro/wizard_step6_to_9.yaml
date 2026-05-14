@@ -1,0 +1,85 @@
+appId: com.miraikousou.lessonapp
+name: WIZ-05 ~ WIZ-09 サマリ → 処理中 → 完了演出 (tap / navigation only)
+---
+# wizard step5 末尾の「次へ」から summary → processing → complete までを tap navigation のみで網羅
+# 作成: qa-2, 2026-05-14
+#
+# 前提:
+#   - AUTH_BYPASS build または事前 signup + wizard 入力済 session
+#   - 本 YAML は wizard_step1_to_5.yaml の続編、または bypass deep link で summary 画面に直行する想定
+#   - 「これで登録」tap で processing 経由で実際に DB INSERT が走るため、test 環境必須
+#
+# 注意 (学習事項 #11 + #12 継承):
+#   - 入力 sheet (MemberFormSheet / LessonFormSheet) は本 YAML では検証 scope 外
+#   - 「次へ」navigate のみで space を 1 件ずつ進める
+#
+# 撮影目標:
+#   01_step5_next.png    = step5 から summary 遷移直前
+#   02_summary.png       = WIZ-06 サマリ画面
+#   03_processing.png    = WIZ-07 処理中 (ローディング演出)
+#   04_complete.png      = WIZ-09 完了演出 (紙吹雪 + 達成メッセージ)
+#   05_post_complete.png = 「カレンダーを見る」tap 後の遷移
+#
+# 検証項目:
+#   - step5 → summary 遷移
+#   - summary 画面の主要要素 (h1「この内容で登録しますか？」/ 合計表示 / 「これで登録」button)
+#   - 処理中の loading 演出 (📅 emoji + ActivityIndicator)
+#   - complete 画面の達成メッセージ (h1「家族のカレンダーが完成しました！」/ 「カレンダーを見る」button)
+
+- launchApp:
+    clearState: false
+    stopApp: true
+
+- waitForAnimationToEnd:
+    timeout: 5000
+
+# step5 状態を仮定 (wizard_step1_to_5.yaml 末尾相当の状態を継続)
+# 注: 実運用では bypass の deep link / state seed が必要
+
+- assertVisible: "他の家族メンバー"
+- assertVisible: "次へ"
+- takeScreenshot:
+    path: ../screenshots/maestro_wizard_step6_to_9_01_step5_next
+
+# 「次へ」で summary 遷移
+- tapOn:
+    text: "次へ"
+- waitForAnimationToEnd:
+    timeout: 3000
+
+# WIZ-06 サマリ画面
+- assertVisible: "この内容で登録しますか？"
+- assertVisible: "合計:"
+- assertVisible: "これで登録"
+- takeScreenshot:
+    path: ../screenshots/maestro_wizard_step6_to_9_02_summary
+
+# 「これで登録」で processing 画面 → 自動で complete 遷移
+- tapOn:
+    text: "これで登録"
+- waitForAnimationToEnd:
+    timeout: 2000
+
+# WIZ-07 処理中 (短時間の表示なので takeScreenshot best-effort)
+# loading 画面の主要要素は表示時間によっては capture できない可能性あり
+- takeScreenshot:
+    path: ../screenshots/maestro_wizard_step6_to_9_03_processing
+    optional: true
+
+- waitForAnimationToEnd:
+    timeout: 10000
+
+# WIZ-09 完了演出
+- assertVisible: "家族のカレンダーが"
+- assertVisible: "カレンダーを見る"
+- takeScreenshot:
+    path: ../screenshots/maestro_wizard_step6_to_9_04_complete
+
+# 「カレンダーを見る」tap で notification permission onboarding 遷移
+- tapOn:
+    text: "カレンダーを見る"
+- waitForAnimationToEnd:
+    timeout: 5000
+
+- takeScreenshot:
+    path: ../screenshots/maestro_wizard_step6_to_9_05_post_complete

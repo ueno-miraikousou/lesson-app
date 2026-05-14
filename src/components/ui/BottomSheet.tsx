@@ -16,7 +16,7 @@ export interface BottomSheetHandle {
 export interface BottomSheetProps {
   children: ReactNode;
   /** 各 snap point の高さ (例: ['50%', '90%']) */
-  snapPoints?: ReadonlyArray<string | number>;
+  snapPoints?: readonly (string | number)[];
   /** バックドロップタップで閉じる */
   closeOnBackdropTap?: boolean;
   /** ハンドルバー表示 */

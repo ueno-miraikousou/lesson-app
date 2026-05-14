@@ -42,7 +42,7 @@ export interface WizardLesson {
 export interface WizardScheduleSlot {
   tempId: string;
   /** 'SU' | 'MO' | 'TU' | 'WE' | 'TH' | 'FR' | 'SA' (RRULE BYDAY 互換) */
-  daysOfWeek: ReadonlyArray<'SU' | 'MO' | 'TU' | 'WE' | 'TH' | 'FR' | 'SA'>;
+  daysOfWeek: readonly ('SU' | 'MO' | 'TU' | 'WE' | 'TH' | 'FR' | 'SA')[];
   /** "HH:mm" */
   startTime: string;
   /** "HH:mm" */

@@ -1,4 +1,4 @@
-﻿/**
+/**
  * Supabase 繝・・繝悶Ν縺ｮ蝙句ｮ夂ｾｩ (DDL 縺九ｉ謇区嶌縺・縲・ *
  * 蟆・擂逧・↓縺ｯ `supabase gen types typescript` 縺ｧ閾ｪ蜍慕函謌舌↓蛻・ｊ譖ｿ縺医ｋ縲・ * 迴ｾ譎らせ縺ｧ縺ｯ DDL 繝輔ぃ繧､繝ｫ `supabase/migrations/0001_initial_schema.sql` 繧呈ｭ｣譛ｬ縺ｨ縺励※
  * 謇区嶌縺阪〒蜷梧悄縺吶ｋ縲・DL 繧貞､画峩縺励◆繧峨％縺ｮ繝輔ぃ繧､繝ｫ繧よ峩譁ｰ縺吶ｋ縺薙→縲・ *

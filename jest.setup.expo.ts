@@ -228,3 +228,4 @@ afterEach(() => {
 //   3. beforeAll(() => server.listen({ onUnhandledRequest: 'error' }))
 // の手順で再有効化する。`src/msw/server.ts` + `handlers.ts` は維持済。
 // ---------------------------------------------------------------
+

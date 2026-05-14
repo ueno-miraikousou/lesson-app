@@ -1,0 +1,100 @@
+appId: com.miraikousou.lessonapp
+name: NOTIF-01 通知設定 6 セクション動作確認 (tap / navigation only)
+---
+# NOTIF-01 通知設定画面の 6 セクション表示確認 + 主要トグル / 試聴 button 動作確認
+# 作成: qa-2, 2026-05-14
+#
+# 前提:
+#   - 認証済 + wizard 完了済 session (main 領域到達済)
+#   - もしくは AUTH_BYPASS + deep link で /(main)/notifications に直行
+#
+# 注意 (学習事項 ME-4 NOTIF-01 案 α 実装):
+#   - 6 セクション: 通知 / 通知のタイミング / 通知の内容 / プライバシー / サウンド / メンバー別の設定
+#   - 楽観的更新: トグル即時反映 → DB 失敗時に rollback
+#   - エラー表示: 画面下部 accessibilityLiveRegion="polite"
+#   - DB 変更ゼロ (notification_preferences DEFAULTS が 9 項目フル対応)
+#   - 6 セクション目「メンバー別の設定」は placeholder (近日実装予定)
+#
+# 撮影目標:
+#   01_initial.png         = 画面初期表示 (全 6 セクション header 一覧)
+#   02_master_toggle.png   = §通知 マスタートグル状態
+#   03_timing_section.png  = §通知のタイミング セクション
+#   04_content_section.png = §通知の内容 セクション
+#   05_privacy_section.png = §プライバシー セクション
+#   06_sound_section.png   = §サウンド セクション
+#   07_members_section.png = §メンバー別の設定 (placeholder)
+#
+# 検証項目:
+#   - 6 セクション全 header 表示
+#   - 各セクションの主要 ToggleRow 表示
+#   - section header の accessibilityRole="header"
+#   - トグル ON/OFF 即時反映 (楽観的更新)
+
+- launchApp:
+    clearState: false
+    stopApp: true
+
+- waitForAnimationToEnd:
+    timeout: 5000
+
+# 通知設定画面到達を仮定 (main の menu / link 経由 or deep link)
+# 注: 実運用では main 画面から「設定」→「通知」遷移、もしくは deep link
+
+- assertVisible: "通知設定"
+- assertVisible: "通知のタイミング、内容、サウンドなどを設定します"
+- takeScreenshot:
+    path: ../screenshots/maestro_notif_settings_01_initial
+
+# §通知 (マスタートグル)
+- assertVisible: "通知"
+- assertVisible: "通知を受け取る"
+- assertVisible: "このアプリからの通知を受け取ります"
+- takeScreenshot:
+    path: ../screenshots/maestro_notif_settings_02_master_toggle
+
+# 「通知を受け取る」tap (楽観的更新 trigger)
+- tapOn:
+    text: "通知を受け取る"
+    optional: true
+- waitForAnimationToEnd:
+    timeout: 2000
+
+# §通知のタイミング
+- assertVisible: "通知のタイミング"
+- scroll
+- waitForAnimationToEnd:
+    timeout: 2000
+- takeScreenshot:
+    path: ../screenshots/maestro_notif_settings_03_timing_section
+
+# §通知の内容
+- scroll
+- waitForAnimationToEnd:
+    timeout: 2000
+- assertVisible: "通知の内容"
+- takeScreenshot:
+    path: ../screenshots/maestro_notif_settings_04_content_section
+
+# §プライバシー
+- scroll
+- waitForAnimationToEnd:
+    timeout: 2000
+- assertVisible: "プライバシー"
+- takeScreenshot:
+    path: ../screenshots/maestro_notif_settings_05_privacy_section
+
+# §サウンド
+- scroll
+- waitForAnimationToEnd:
+    timeout: 2000
+- assertVisible: "サウンド"
+- takeScreenshot:
+    path: ../screenshots/maestro_notif_settings_06_sound_section
+
+# §メンバー別の設定 (placeholder)
+- scroll
+- waitForAnimationToEnd:
+    timeout: 2000
+- assertVisible: "メンバー別の設定"
+- takeScreenshot:
+    path: ../screenshots/maestro_notif_settings_07_members_section

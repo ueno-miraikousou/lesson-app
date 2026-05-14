@@ -30,7 +30,7 @@ export interface LessonFormSheetProps {
 
 type DayOfWeek = 'SU' | 'MO' | 'TU' | 'WE' | 'TH' | 'FR' | 'SA';
 
-const DAYS: ReadonlyArray<{ value: DayOfWeek; label: string }> = [
+const DAYS: readonly { value: DayOfWeek; label: string }[] = [
   { value: 'SU', label: '日' },
   { value: 'MO', label: '月' },
   { value: 'TU', label: '火' },
@@ -73,7 +73,7 @@ export function LessonFormSheet({
   const [name, setName] = useState(initialValues?.name ?? '');
   const [classroomName, setClassroomName] = useState(initialValues?.classroomName ?? '');
   const [location, setLocation] = useState(initialValues?.location ?? '');
-  const [days, setDays] = useState<ReadonlyArray<DayOfWeek>>(initialSlot.daysOfWeek);
+  const [days, setDays] = useState<readonly DayOfWeek[]>(initialSlot.daysOfWeek);
   const [startTime, setStartTime] = useState(initialSlot.startTime);
   const [endTime, setEndTime] = useState(initialSlot.endTime);
   const [showStartPicker, setShowStartPicker] = useState(false);

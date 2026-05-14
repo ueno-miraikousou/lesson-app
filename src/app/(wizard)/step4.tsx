@@ -6,7 +6,6 @@ import { LessonFormSheet } from '../../components/forms/LessonFormSheet';
 import { PrimaryButton } from '../../components/ui/PrimaryButton';
 import { ScreenContainer } from '../../components/ui/ScreenContainer';
 import { WizardHeader } from '../../components/wizard/WizardHeader';
-import { tempId } from '../../lib/id';
 import { useAuthStore } from '../../stores/auth-store';
 import { memberPalette } from '../../theme/colors';
 import { useWizardStore, type WizardLesson, type WizardMember } from '../../stores/wizard-store';

@@ -22,7 +22,6 @@ export default function Step5Screen() {
   const upsertMember = useWizardStore((s) => s.upsertMember);
   const removeMember = useWizardStore((s) => s.removeMember);
   const upsertLesson = useWizardStore((s) => s.upsertLesson);
-  const removeLesson = useWizardStore((s) => s.removeLesson);
   const setStep = useWizardStore((s) => s.setStep);
 
   // child でも operator でもない他メンバー

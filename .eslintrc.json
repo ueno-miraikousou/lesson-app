@@ -27,5 +27,5 @@
     "@typescript-eslint/consistent-type-imports": "warn",
     "no-console": ["warn", { "allow": ["warn", "error"] }]
   },
-  "ignorePatterns": ["node_modules/", "dist/", ".expo/", "android/", "ios/"]
+  "ignorePatterns": ["node_modules/", "dist/", ".expo/", "android/", "ios/", "supabase/functions/"]
 }

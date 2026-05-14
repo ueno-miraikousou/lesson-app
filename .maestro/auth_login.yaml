@@ -1,0 +1,88 @@
+appId: com.miraikousou.lessonapp
+name: AUTH-04 既存ログインフロー (tap / navigation only)
+---
+# 既存アカウントでのログイン動作確認 + パスワード忘れ link 検証
+# 作成: qa-2, 2026-05-14
+#
+# 注意 (学習事項 #11 + #12 継承):
+#   - adb input / Maestro inputText は RN TextInput onChangeText を発火させない
+#   - → 入力は AUTH_BYPASS or focus assertion のみ、本 YAML は tap / navigation のみ網羅
+#   - 入力フローは別途 EXPO_PUBLIC_AUTH_BYPASS build で wizard 側を検証
+#
+# 撮影目標:
+#   01_login_intro.png         = ログイン画面表示
+#   02_login_email_focus.png   = email field focus 状態
+#   03_login_password_focus.png = password field focus 状態
+#   04_reset_password_link.png = 「パスワードを忘れた方」link tap 後の reset 画面遷移確認
+#
+# 検証項目:
+#   - ログイン画面の主要要素表示 (h1「ログイン」/ メアド label / パスワード label / 「ログイン」button)
+#   - 「新規登録」link navigate (signup.tsx 遷移)
+#   - 「パスワードを忘れた方」link navigate (reset-password.tsx 遷移)
+
+- launchApp:
+    clearState: true
+    stopApp: true
+
+# 起動: ログイン画面が表示される (未認証時のガードで自動遷移)
+- waitForAnimationToEnd:
+    timeout: 5000
+
+# 主要要素アサーション
+- assertVisible: "ログイン"
+- assertVisible: "メールアドレスとパスワードを入力してください"
+- assertVisible: "メールアドレス"
+- assertVisible: "パスワード"
+- assertVisible: "パスワードを忘れた方"
+- assertVisible: "アカウントをお持ちでない方"
+- assertVisible: "新規登録"
+
+# 撮影 1: ログイン画面初期表示
+- takeScreenshot:
+    path: ../screenshots/maestro_auth_login_01_intro
+
+# 入力 field focus テスト (onChangeText 発火しないが focus 状態は確認可能)
+- tapOn:
+    text: "メールアドレス"
+    optional: true
+- waitForAnimationToEnd:
+    timeout: 2000
+- takeScreenshot:
+    path: ../screenshots/maestro_auth_login_02_email_focus
+
+- tapOn:
+    text: "パスワード"
+    optional: true
+- waitForAnimationToEnd:
+    timeout: 2000
+- takeScreenshot:
+    path: ../screenshots/maestro_auth_login_03_password_focus
+
+# パスワードリセット link 遷移確認
+- tapOn:
+    text: "パスワードを忘れた方"
+- waitForAnimationToEnd:
+    timeout: 3000
+- assertVisible: "パスワードリセット"
+- assertVisible: "ご登録のメールアドレスにリセット用リンクを送信します"
+- assertVisible: "リセットメールを送信"
+- takeScreenshot:
+    path: ../screenshots/maestro_auth_login_04_reset_password_link
+
+# ログイン画面に戻る
+- tapOn:
+    text: "ログインに戻る"
+- waitForAnimationToEnd:
+    timeout: 3000
+- assertVisible: "ログイン"
+- takeScreenshot:
+    path: ../screenshots/maestro_auth_login_05_back_to_login
+
+# 新規登録 link 遷移確認
+- tapOn:
+    text: "新規登録"
+- waitForAnimationToEnd:
+    timeout: 3000
+- assertVisible: "アカウントを作成"
+- takeScreenshot:
+    path: ../screenshots/maestro_auth_login_06_signup_link

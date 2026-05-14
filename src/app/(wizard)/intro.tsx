@@ -35,7 +35,7 @@ interface Slide {
   emoji: string;
 }
 
-const SLIDES: ReadonlyArray<Slide> = [
+const SLIDES: readonly Slide[] = [
   {
     key: 'pain',
     title: '家族みんなの習い事を\n1つ1つ登録するの、\n大変ですよね。',

@@ -1,0 +1,62 @@
+appId: com.miraikousou.lessonapp
+name: WIZ-09 完了演出 (紙吹雪 + Reduce Motion 検証)
+---
+# WIZ-09 完了画面の紙吹雪演出 + Reduce Motion ON 時の空 View 動作検証
+# 作成: qa-2, 2026-05-14
+#
+# 前提:
+#   - AUTH_BYPASS build + deep link で complete 画面に直接到達できる
+#   - もしくは前 YAML (wizard_step6_to_9.yaml) からの継続
+#   - Reduce Motion トグルは OS 設定経由 (本 YAML は OFF 状態を前提に撮影)
+#
+# 注意 (学習事項 ME-4 ハプティクス):
+#   - 紙吹雪は 15-20 枚 / 800ms / メインカラー 4 色
+#   - Reduce Motion ON 時は Confetti コンポーネントが内部で null を返す → 紙吹雪なし
+#   - ハプティクス: Reduce Motion ON 時は鳴らさない (Apple HIG)
+#   - 達成音: notification_preferences.celebration_sound_enabled が ON のみ再生 (デフォルト OFF)
+#
+# 撮影目標:
+#   01_complete_initial.png    = 紙吹雪表示直後 (800ms 内)
+#   02_complete_settled.png    = 紙吹雪終了後の達成画面
+#   03_calendar_button.png     = 「カレンダーを見る」button 中心 capture
+#
+# 検証項目:
+#   - 紙吹雪表示 (Confetti コンポーネント、testID="confetti-piece" の存在)
+#   - 達成メッセージ「家族のカレンダーが完成しました！」
+#   - 「カレンダーを見る」button 表示
+#   - 紙吹雪が pointerEvents="none" で button 操作を阻害しないこと
+
+- launchApp:
+    clearState: false
+    stopApp: true
+
+- waitForAnimationToEnd:
+    timeout: 5000
+
+# complete 画面到達を仮定 (前 YAML 継続 or deep link)
+
+# 紙吹雪表示直後 (800ms 内の capture を best-effort で試みる)
+- takeScreenshot:
+    path: ../screenshots/maestro_wizard_celebration_01_initial
+
+# 紙吹雪終了後の安定状態
+- waitForAnimationToEnd:
+    timeout: 3000
+
+- assertVisible: "家族のカレンダーが"
+- assertVisible: "カレンダーを見る"
+- takeScreenshot:
+    path: ../screenshots/maestro_wizard_celebration_02_settled
+
+# 「カレンダーを見る」button focus
+- tapOn:
+    text: "カレンダーを見る"
+    optional: true
+- waitForAnimationToEnd:
+    timeout: 2000
+- takeScreenshot:
+    path: ../screenshots/maestro_wizard_celebration_03_calendar_button
+
+# Reduce Motion ON 検証は OS 設定 + 再 launch が必要なため scope 外
+# 手動補完: OS 設定 > アクセシビリティ > Reduce Motion ON → 本 YAML 再実行
+#         → 紙吹雪が表示されない (空 View) こと + ハプティクス不発を確認

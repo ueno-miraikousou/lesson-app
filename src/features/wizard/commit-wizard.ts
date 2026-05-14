@@ -21,13 +21,13 @@ const OPERATOR_TEMP_ID = 'operator';
 
 interface CommitInput {
   householdId: string;
-  members: ReadonlyArray<WizardMember>;
-  lessons: ReadonlyArray<WizardLesson>;
+  members: readonly WizardMember[];
+  lessons: readonly WizardLesson[];
 }
 
 interface CommitResult {
-  insertedMemberIds: ReadonlyArray<string>;
-  insertedLessonIds: ReadonlyArray<string>;
+  insertedMemberIds: readonly string[];
+  insertedLessonIds: readonly string[];
 }
 
 /**
@@ -144,7 +144,7 @@ export async function commitWizardData(input: CommitInput): Promise<CommitResult
 }
 
 /** 失敗時の補正: 新規 INSERT した members を削除（CASCADE で lessons / schedules も消える）*/
-async function rollbackMembers(memberIds: ReadonlyArray<string>): Promise<void> {
+async function rollbackMembers(memberIds: readonly string[]): Promise<void> {
   if (memberIds.length === 0) return;
   await supabase.from('members').delete().in('id', memberIds as string[]);
 }
