@@ -146,6 +146,7 @@ function ConfettiPiece({ params, fallHeight, fallDurationMs }: ConfettiPieceProp
 
   return (
     <Animated.View
+      testID="confetti-piece"
       style={[
         styles.piece,
         {

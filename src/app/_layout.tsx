@@ -12,6 +12,13 @@ import { useAuthSession } from '../hooks/use-auth-session';
 import { queryClient } from '../lib/query-client';
 import { resolveAuthRoute, useAuthStore } from '../stores/auth-store';
 
+// Phase B QA bypass: ウィザード完了画面 (WIZ-09 紙吹雪 + 達成音) の screenshot 取得用。
+// 本番ビルドには影響しない (環境変数 OFF が default)。
+// 有効化: EXPO_PUBLIC_WIZARD_BYPASS=complete (要 EXPO_PUBLIC_AUTH_BYPASS=true 併用)
+// AuthGate が wizard ルート判定時に /(wizard)/intro ではなく /(wizard)/complete に飛ばす。
+// 参照: team_lead_request_me4_20260513.md §3.3 (a)
+const WIZARD_BYPASS_TARGET = process.env.EXPO_PUBLIC_WIZARD_BYPASS;
+
 /**
  * Auth Guard: 4 段階の優先順位 (AUTH-07 §9)。
  * - 未認証 → /(auth)/login
@@ -52,7 +59,14 @@ function AuthGate() {
         break;
       case 'wizard':
         // onboarding/notification-permission は wizard 完了直後の許可フローなので滞在許可
-        if (!inWizardGroup && !inOnboardingGroup) router.replace('/(wizard)/intro');
+        if (!inWizardGroup && !inOnboardingGroup) {
+          // QA bypass: WIZARD_BYPASS=complete のときは完了画面に直行 (screenshot 用)
+          if (WIZARD_BYPASS_TARGET === 'complete') {
+            router.replace('/(wizard)/complete');
+          } else {
+            router.replace('/(wizard)/intro');
+          }
+        }
         break;
       case 'main':
         // onboarding を経由してメインへ向かう途中の状態を許容
