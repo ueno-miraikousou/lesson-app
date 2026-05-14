@@ -207,19 +207,11 @@ function todayString(): string {
 }
 
 /**
- * CAL-01 メインカレンダー (月表示)。
+ * CAL-01 メインカレンダー。
  *
- * Sprint 1 (C1-T01/T02/T03/T04) 実装:
- *   - react-native-calendars Calendar 月表示 (S-01/S-02)
- *   - members + schedules 取得 (RLS 経由)
- *   - メンバー色分けマーカー (S-05)
- *   - 選択日アジェンダ
- *   - FAB → ScheduleFormSheet (S-07 単発、繰り返し placeholder)
- *
- * Sprint 2 以降の TODO:
- *   - S-08 繰り返し (RRULE) 入力 UI
- *   - S-09/S-10 編集/削除 (CAL-09 詳細経由)
- *   - S-03 週表示 / S-06 メンバーフィルタ
+ * Phase C Sprint 1-5 で完成済 (S-01..10 + I-02/I-03)。
+ * Sprint 6 で下部の「プロフィール / 家族を追加 / ログアウト」3 ボタンを追加。
+ * 「家族を追加」が WIZ-10 追加モード (router.push mode=add) を起動する。
  */
 interface ActionTargetState {
   schedule: Schedule;
@@ -686,12 +678,38 @@ export function CalendarScreen() {
         <Text className="text-h1 text-white" style={{ color: '#FFFFFF' }}>＋</Text>
       </Pressable>
 
-      <View className="border-t border-border bg-surface px-4 py-3">
-        <PrimaryButton
-          label="ログアウト"
-          variant="secondary"
-          onPress={() => void signOut()}
-        />
+      <View
+        className="border-t border-border bg-surface px-4 py-3"
+        testID="calendar-bottom-actions"
+      >
+        <View className="flex-row gap-2">
+          <View className="flex-1">
+            <PrimaryButton
+              label="プロフィール"
+              variant="text"
+              onPress={() => router.push('/(main)/profile')}
+              testID="calendar-action-profile"
+            />
+          </View>
+          <View className="flex-1">
+            <PrimaryButton
+              label="家族を追加"
+              variant="text"
+              onPress={() =>
+                router.push({ pathname: '/(wizard)/intro', params: { mode: 'add' } })
+              }
+              testID="calendar-action-wizard-add"
+            />
+          </View>
+          <View className="flex-1">
+            <PrimaryButton
+              label="ログアウト"
+              variant="text"
+              onPress={() => void signOut()}
+              testID="calendar-action-logout"
+            />
+          </View>
+        </View>
       </View>
 
       {editValues ? (

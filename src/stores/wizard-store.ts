@@ -63,14 +63,23 @@ export type WizardStep =
   | 'processing' // WIZ-07
   | 'complete'; // WIZ-09
 
+/**
+ * ウィザード実行モード (ADR-006 W-10 既存データマージ戦略)。
+ * - `new`: 初回ウィザード (commitWizardData、operator 冪等パスあり)
+ * - `add`: 後からウィザード再実行 (commitWizardAddMode、追加分のみ INSERT)
+ */
+export type WizardMode = 'new' | 'add';
+
 interface WizardState {
   /** 現在の Step */
   currentStep: WizardStep;
-  /** 子供の人数 (WIZ-01 で確定) */
+  /** 実行モード (ADR-006、AsyncStorage キー分離) */
+  mode: WizardMode;
+  /** 子供の人数 (WIZ-01 で確定、mode=add では追加分のみ) */
   childrenCount: number;
-  /** 入力中の全メンバー (子供 + 操作者 + その他) */
+  /** 入力中の全メンバー (mode=add では追加分のみ、operator は含めない) */
   members: WizardMember[];
-  /** 入力中の全習い事 */
+  /** 入力中の全習い事 (mode=add では追加分のみ) */
   lessons: WizardLesson[];
   /** WIZ-04 で「自分の習い事あり」を選択したか */
   hasSelfLesson: boolean | null;
@@ -82,6 +91,7 @@ interface WizardState {
 
 interface WizardActions {
   setStep: (step: WizardStep) => void;
+  setMode: (mode: WizardMode) => void;
   setChildrenCount: (count: number) => void;
   upsertMember: (member: WizardMember) => void;
   removeMember: (tempId: string) => void;
@@ -96,6 +106,7 @@ interface WizardActions {
 
 const initialState: WizardState = {
   currentStep: 'intro',
+  mode: 'new',
   childrenCount: 0,
   members: [],
   lessons: [],
@@ -111,6 +122,9 @@ export const useWizardStore = create<WizardState & WizardActions>()(
 
       setStep: (step) =>
         set((s) => ({ ...s, currentStep: step, lastUpdatedAt: new Date().toISOString() })),
+
+      setMode: (mode) =>
+        set((s) => ({ ...s, mode, lastUpdatedAt: new Date().toISOString() })),
 
       setChildrenCount: (count) =>
         set((s) => ({ ...s, childrenCount: count, lastUpdatedAt: new Date().toISOString() })),
@@ -169,6 +183,7 @@ export const useWizardStore = create<WizardState & WizardActions>()(
       // 一時的な currentStep は永続化対象だが、processing は再開時に summary に巻き戻したい
       partialize: (state) => ({
         currentStep: state.currentStep === 'processing' ? 'summary' : state.currentStep,
+        mode: state.mode,
         childrenCount: state.childrenCount,
         members: state.members,
         lessons: state.lessons,

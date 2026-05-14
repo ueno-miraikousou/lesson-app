@@ -3,6 +3,7 @@ import { useMemo, useState } from 'react';
 import { Pressable, Text, View } from 'react-native';
 import { ScrollView } from 'react-native-gesture-handler';
 
+import { AddModeBadge } from '../../components/wizard/AddModeBadge';
 import { LessonFormSheet } from '../../components/forms/LessonFormSheet';
 import { PrimaryButton } from '../../components/ui/PrimaryButton';
 import { ScreenContainer } from '../../components/ui/ScreenContainer';
@@ -27,6 +28,7 @@ const DAY_LABELS: Record<string, string> = {
  * 仕様: 02_設計/画面/WIZ-ウィザード一括設計.md WIZ-03
  */
 export default function Step3Screen() {
+  const mode = useWizardStore((s) => s.mode);
   const members = useWizardStore((s) => s.members);
   const lessons = useWizardStore((s) => s.lessons);
   const upsertLesson = useWizardStore((s) => s.upsertLesson);
@@ -66,6 +68,12 @@ export default function Step3Screen() {
   function handleNextChild() {
     if (activeChildIndex < childMembers.length - 1) {
       setActiveChildIndex((i) => i + 1);
+      return;
+    }
+    // ADR-006 / designer §4.2: mode=add では WIZ-04 を自動スキップ
+    if (mode === 'add') {
+      setStep('step5-other-members');
+      router.push('/(wizard)/step5');
       return;
     }
     setStep('step4-self-lesson');
@@ -149,6 +157,11 @@ export default function Step3Screen() {
       <WizardHeader currentStep={3} onBack={handleBack} onAbort={() => router.replace('/')} />
 
       <ScrollView className="flex-1 px-4 pt-4">
+        {mode === 'add' ? (
+          <View className="mb-2" testID="wiz-add-mode-banner-step3">
+            <AddModeBadge />
+          </View>
+        ) : null}
         <Text className="text-h1 text-text-primary">{activeChild.name}ちゃんの習い事</Text>
         <Text className="mt-1 text-caption text-text-secondary">
           {activeChildIndex + 1}人目 / {childMembers.length}人中

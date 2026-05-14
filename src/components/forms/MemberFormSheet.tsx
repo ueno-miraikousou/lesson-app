@@ -19,6 +19,8 @@ export interface MemberFormSheetProps {
   initialValues?: Partial<WizardMember>;
   /** すでに使用中の色（重複回避のための表示用、任意） */
   usedColors?: readonly string[];
+  /** すでに使用中の名前 (lowercase / trim 済、重複警告用、任意)。WIZ-10 追加モードで使用 */
+  usedNames?: readonly string[];
   /** ウィザードで使う場合の表示文脈 */
   wizardContext?: {
     currentIndex: number;
@@ -46,6 +48,7 @@ export function MemberFormSheet({
   mode,
   initialValues,
   usedColors,
+  usedNames,
   wizardContext,
   onSubmit,
   onClose,
@@ -173,6 +176,27 @@ export function MemberFormSheet({
             maxLength={30}
             errorText={nameError}
           />
+
+          {/* WIZ-10 重複警告: edit モードかつ自分自身の名前は除外 */}
+          {(() => {
+            const trimmed = name.trim().toLowerCase();
+            const selfName = initialValues?.name?.trim().toLowerCase();
+            const isDuplicate =
+              !!trimmed &&
+              (usedNames ?? []).some((n) => n === trimmed && n !== selfName);
+            if (!isDuplicate) return null;
+            return (
+              <View
+                className="-mt-2 mb-3 rounded-button bg-warning/10 px-3 py-2"
+                accessibilityLiveRegion="polite"
+                testID="member-form-name-duplicate-warning"
+              >
+                <Text className="text-caption text-warning">
+                  ⚠ 同じ名前のメンバーがいます。続行も可能ですが、識別子の併記をおすすめします。
+                </Text>
+              </View>
+            );
+          })()}
 
           <View className="mb-4">
             <Text className="mb-1 text-caption text-text-primary">生年月日（任意）</Text>

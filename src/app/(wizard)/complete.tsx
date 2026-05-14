@@ -1,5 +1,5 @@
 import { useEffect } from 'react';
-import { router } from 'expo-router';
+import { router, useLocalSearchParams } from 'expo-router';
 import { Text, View } from 'react-native';
 import * as Haptics from 'expo-haptics';
 
@@ -27,6 +27,11 @@ import { playCelebrationSound } from '../../lib/celebration-sound';
  */
 export default function CompleteScreen() {
   const reduceMotion = useReduceMotionEnabled();
+  // mode は wizard-store の clearWizard() で reset されるため、processing から
+  // route params で渡してもらう (ADR-006 §4.3 完了挙動分岐)
+  const params = useLocalSearchParams<{ mode?: 'add' | 'new'; addedCount?: string }>();
+  const isAddMode = params.mode === 'add';
+  const addedCount = parseInt(params.addedCount ?? '0', 10) || 0;
 
   useEffect(() => {
     let cancelled = false;
@@ -57,6 +62,11 @@ export default function CompleteScreen() {
   }, [reduceMotion]);
 
   function handleSeeCalendar() {
+    if (isAddMode) {
+      // 追加モード: 通知 ON 案内は不要 (既にウィザード完了済)、カレンダーへ直接戻る
+      router.replace('/(main)/calendar');
+      return;
+    }
     router.replace('/onboarding/notification-permission');
   }
 
@@ -66,8 +76,15 @@ export default function CompleteScreen() {
         <Text accessibilityElementsHidden importantForAccessibility="no" className="text-display">
           {'🎉'}
         </Text>
-        <Text className="mt-6 text-center text-h1 text-text-primary">
-          家族のカレンダーが{'\n'}完成しました！
+        <Text
+          className="mt-6 text-center text-h1 text-text-primary"
+          testID={isAddMode ? 'wiz-add-mode-complete-title' : 'wiz-complete-title'}
+        >
+          {isAddMode
+            ? addedCount > 0
+              ? `${addedCount} 人 追加しました！`
+              : '追加しました！'
+            : `家族のカレンダーが\n完成しました！`}
         </Text>
 
         <View className="mt-12 w-full max-w-xs">

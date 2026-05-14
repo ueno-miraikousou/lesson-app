@@ -2,11 +2,14 @@ import { router } from 'expo-router';
 import { useMemo, useState } from 'react';
 import { Pressable, Text, View } from 'react-native';
 
+import { AddModeBadge } from '../../components/wizard/AddModeBadge';
 import { LessonFormSheet } from '../../components/forms/LessonFormSheet';
 import { MemberFormSheet } from '../../components/forms/MemberFormSheet';
 import { PrimaryButton } from '../../components/ui/PrimaryButton';
 import { ScreenContainer } from '../../components/ui/ScreenContainer';
 import { WizardHeader } from '../../components/wizard/WizardHeader';
+import { useExistingHouseholdData } from '../../features/wizard/use-existing-household-data';
+import { useAuthStore } from '../../stores/auth-store';
 import { useWizardStore, type WizardLesson, type WizardMember } from '../../stores/wizard-store';
 import { OPERATOR_TEMP_ID } from './step4';
 
@@ -17,12 +20,15 @@ import { OPERATOR_TEMP_ID } from './step4';
  * 仕様: 02_設計/画面/WIZ-ウィザード一括設計.md WIZ-05
  */
 export default function Step5Screen() {
+  const mode = useWizardStore((s) => s.mode);
   const members = useWizardStore((s) => s.members);
   const lessons = useWizardStore((s) => s.lessons);
   const upsertMember = useWizardStore((s) => s.upsertMember);
   const removeMember = useWizardStore((s) => s.removeMember);
   const upsertLesson = useWizardStore((s) => s.upsertLesson);
   const setStep = useWizardStore((s) => s.setStep);
+  const householdId = useAuthStore((s) => s.householdId);
+  const existing = useExistingHouseholdData(householdId, mode === 'add');
 
   // child でも operator でもない他メンバー
   const otherMembers = useMemo(
@@ -30,7 +36,17 @@ export default function Step5Screen() {
     [members],
   );
 
-  const usedColors = useMemo(() => members.map((m) => m.colorHex), [members]);
+  const usedColors = useMemo(() => {
+    const local = members.map((m) => m.colorHex);
+    if (mode === 'add') return [...local, ...existing.data.usedColors];
+    return local;
+  }, [members, mode, existing.data.usedColors]);
+
+  const usedNames = useMemo(() => {
+    const local = members.map((m) => m.name.trim().toLowerCase()).filter(Boolean);
+    if (mode === 'add') return [...local, ...existing.data.usedNames];
+    return local;
+  }, [members, mode, existing.data.usedNames]);
 
   const [showMemberForm, setShowMemberForm] = useState(false);
   const [editingMember, setEditingMember] = useState<WizardMember | null>(null);
@@ -68,6 +84,11 @@ export default function Step5Screen() {
       <WizardHeader currentStep={5} onBack={handleBack} onAbort={() => router.replace('/')} />
 
       <View className="flex-1 px-4 pt-4">
+        {mode === 'add' ? (
+          <View className="mb-2" testID="wiz-add-mode-banner-step5">
+            <AddModeBadge />
+          </View>
+        ) : null}
         <Text className="text-h1 text-text-primary">他の家族メンバー</Text>
         <Text className="mt-1 text-caption text-text-secondary">
           配偶者・祖父母などを登録できます（任意）
@@ -148,6 +169,7 @@ export default function Step5Screen() {
         mode={editingMember ? 'edit' : 'create-other'}
         initialValues={editingMember ?? undefined}
         usedColors={usedColors}
+        usedNames={usedNames}
         onSubmit={handleSubmitMember}
         onClose={() => {
           setShowMemberForm(false);

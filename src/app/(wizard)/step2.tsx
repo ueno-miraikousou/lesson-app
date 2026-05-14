@@ -2,10 +2,13 @@ import { router } from 'expo-router';
 import { useEffect, useMemo, useState } from 'react';
 import { Pressable, Text, View } from 'react-native';
 
+import { AddModeBadge } from '../../components/wizard/AddModeBadge';
 import { MemberFormSheet } from '../../components/forms/MemberFormSheet';
 import { PrimaryButton } from '../../components/ui/PrimaryButton';
 import { ScreenContainer } from '../../components/ui/ScreenContainer';
 import { WizardHeader } from '../../components/wizard/WizardHeader';
+import { useExistingHouseholdData } from '../../features/wizard/use-existing-household-data';
+import { useAuthStore } from '../../stores/auth-store';
 import { useWizardStore, type WizardMember } from '../../stores/wizard-store';
 
 /**
@@ -15,11 +18,14 @@ import { useWizardStore, type WizardMember } from '../../stores/wizard-store';
  * 仕様: 02_設計/画面/WIZ-ウィザード一括設計.md WIZ-02
  */
 export default function Step2Screen() {
+  const mode = useWizardStore((s) => s.mode);
   const childrenCount = useWizardStore((s) => s.childrenCount);
   const members = useWizardStore((s) => s.members);
   const upsertMember = useWizardStore((s) => s.upsertMember);
   const removeMember = useWizardStore((s) => s.removeMember);
   const setStep = useWizardStore((s) => s.setStep);
+  const householdId = useAuthStore((s) => s.householdId);
+  const existing = useExistingHouseholdData(householdId, mode === 'add');
 
   const childMembers = useMemo(() => members.filter((m) => m.role === 'child'), [members]);
 
@@ -35,7 +41,23 @@ export default function Step2Screen() {
     }
   }, [childMembers, childrenCount, removeMember]);
 
-  const usedColors = useMemo(() => members.map((m) => m.colorHex), [members]);
+  // mode=add 時は既存色も「使用済」とみなしてグレーアウト推奨
+  const usedColors = useMemo(() => {
+    const local = members.map((m) => m.colorHex);
+    if (mode === 'add') {
+      return [...local, ...existing.data.usedColors];
+    }
+    return local;
+  }, [members, mode, existing.data.usedColors]);
+
+  // mode=add 時は既存名と現セッション内の名を「重複候補」とみなす
+  const usedNames = useMemo(() => {
+    const local = members.map((m) => m.name.trim().toLowerCase()).filter(Boolean);
+    if (mode === 'add') {
+      return [...local, ...existing.data.usedNames];
+    }
+    return local;
+  }, [members, mode, existing.data.usedNames]);
 
   function handleSubmit(member: WizardMember) {
     upsertMember({ ...member, role: 'child' });
@@ -69,10 +91,25 @@ export default function Step2Screen() {
       <WizardHeader currentStep={2} onBack={handleBack} onAbort={() => router.replace('/')} />
 
       <View className="flex-1 px-4 pt-4">
+        {mode === 'add' ? (
+          <View className="mb-2" testID="wiz-add-mode-banner-step2">
+            <AddModeBadge />
+          </View>
+        ) : null}
         <Text className="text-h1 text-text-primary">お子さんの情報</Text>
         <Text className="mt-1 text-caption text-text-secondary">
-          {childrenCount}人分の情報を入力してください
+          {mode === 'add'
+            ? `追加で ${childrenCount} 人分の情報を入力してください`
+            : `${childrenCount}人分の情報を入力してください`}
         </Text>
+        {mode === 'add' && existing.data.usedNames.length > 0 ? (
+          <Text
+            className="mt-1 text-caption text-text-secondary"
+            testID="wiz-add-mode-existing-names-hint"
+          >
+            既存メンバー: {existing.data.members.map((m) => m.name).join('・')}
+          </Text>
+        ) : null}
 
         <View className="mt-4 gap-3">
           {Array.from({ length: childrenCount }).map((_, i) => {
@@ -118,6 +155,7 @@ export default function Step2Screen() {
         mode={editingMember ? 'edit' : 'create-child'}
         initialValues={editingMember}
         usedColors={usedColors}
+        usedNames={usedNames}
         wizardContext={{
           currentIndex: editingIndex ?? 0,
           totalCount: childrenCount,

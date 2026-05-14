@@ -25,6 +25,7 @@ const OPERATOR_TEMP_ID = 'operator';
  */
 export default function Step4Screen() {
   const session = useAuthStore((s) => s.session);
+  const mode = useWizardStore((s) => s.mode);
   const members = useWizardStore((s) => s.members);
   const lessons = useWizardStore((s) => s.lessons);
   const upsertMember = useWizardStore((s) => s.upsertMember);
@@ -45,7 +46,9 @@ export default function Step4Screen() {
   const [editingLesson, setEditingLesson] = useState<WizardLesson | null>(null);
 
   // 画面表示時に operator メンバーを冪等に作成（B案: hasSelfLesson の選択前から作っておく）
+  // ADR-006: mode=add 時は operator は既存 DB 行を使うため、wizard store に operator を作らない
   useEffect(() => {
+    if (mode === 'add') return;
     if (operator) return;
     const displayName =
       session?.user?.user_metadata?.['display_name'] ??
@@ -61,7 +64,14 @@ export default function Step4Screen() {
       colorHex: usedColor,
     };
     upsertMember(newOperator);
-  }, [operator, session, upsertMember, usedColors]);
+  }, [mode, operator, session, upsertMember, usedColors]);
+
+  // ADR-006 / designer-3 §4.2: mode=add 時は WIZ-04 を自動スキップして step5 へ
+  useEffect(() => {
+    if (mode !== 'add') return;
+    setStep('step5-other-members');
+    router.replace('/(wizard)/step5');
+  }, [mode, setStep]);
 
   function handleNext() {
     setStep('step5-other-members');
