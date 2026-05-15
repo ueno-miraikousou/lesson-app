@@ -1,0 +1,166 @@
+appId: com.miraikousou.lessonapp
+name: SHARE-03/04 招待コード入力 + 受諾フロー (F-03)
+---
+# SHARE-03 招待コード入力画面 + SHARE-04 受諾確認画面の到達 + 主要 UI 確認
+# 作成: qa-2, 2026-05-16
+# 対象 Sprint: Phase D Sprint 1 (D1-T07)
+#
+# 前提:
+#   - AUTH_BYPASS=true 別端末セッション、もしくは新規 signup 後の wizard 未完了状態
+#   - 別端末から発行された 6 桁招待コード (test 時は事前に setup-sec2 で 4 種コード生成想定)
+#   - Maestro inputText 不可 (#11/#12) → 6 桁数字フィールド入力は本 YAML では表示確認のみ、
+#     deep link 経由 (`/share/invite-code?code=XXXXXX`) でプリフィル経路を採用するか、L2 jest で input ロジック検証
+#
+# 注意:
+#   - testID: share-input-* (SHARE-03)、share-confirm-* (SHARE-04) (InviteCodeEntry/AcceptScreen.tsx 確認済)
+#   - SHARE-03 → 「次へ」(share-input-next) → SHARE-04 → accept_invitation RPC 自動実行
+#   - SHARE-04 は params.code で auto-mutate (useEffect on mount)、結果は 3 状態:
+#     1. accepted (share-confirm-success): カレンダー遷移ボタン (share-confirm-goto-home)
+#     2. error (share-confirm-error): エラー文言 + 戻るボタン (share-confirm-back)
+#     3. loading (share-confirm-loading): ActivityIndicator + キャンセル (share-confirm-cancel)
+#   - エラー種別 7 種 (invalid_format/not_found/expired/used/already_member/unauthenticated/unknown)、L2 jest で網羅
+#
+# 撮影目標:
+#   01_input_header.png      = SHARE-03 (share-input-header) 入力画面表示
+#   02_input_code.png        = 招待コード入力欄 (share-input-code、6 桁数字)
+#   03_input_next_disabled.png = 「次へ」ボタン disabled (空入力時、share-input-next)
+#   04_confirm_loading.png   = SHARE-04 受諾中 (share-confirm-loading) ActivityIndicator
+#   05_confirm_success.png   = SHARE-04 成功 (share-confirm-success) + 世帯名表示
+#   06_confirm_household.png = share-confirm-household-name (合流後世帯)
+#   07_confirm_goto_home.png = 「カレンダーを開く」ボタン (share-confirm-goto-home)
+#   08_error_invalid.png     = エラー系 (share-confirm-error) optional (テストパターン次第)
+#
+# 検証項目:
+#   - AC1 (F-03): 招待コード入力 UI (share-input-code) 表示
+#   - AC2 (F-03): 入力で合流フロー → accept_invitation RPC → SHARE-04 成功画面
+#   - AC3-5 (F-03): エラー系 4 種 (expired / used / 不正コード / 既メンバー) は本 YAML 範囲外、L3 SEC-2 INV-04 で検証
+#   - 戻る (share-confirm-back) → SHARE-03 復帰確認 (回帰確認用)
+#
+# 範囲外 (L2 jest / L3 SEC-2 へ移譲):
+#   - 6 桁数字入力 (inputText 不可、L2 jest で fireEvent.changeText 経由)
+#   - エラー文言 7 種翻訳 (L2 jest InviteCodeAcceptScreen.test)
+#   - accept_invitation RPC の RLS 検証 (SEC-2 INV-05/06)
+#   - 期限切れ / 使用済 / 形式不正 (SEC-2 INV-04 で検証)
+#   - 受諾後 setHouseholdId による store 切替 (jest store test)
+
+- launchApp:
+    clearState: false
+    stopApp: true
+
+- waitForAnimationToEnd:
+    timeout: 5000
+
+# SHARE-03 header 到達確認
+# 想定: メイン → 設定 → 「招待コードで参加」もしくは deep link `/share/invite-code`
+- assertVisible:
+    id: "share-input-header"
+- takeScreenshot:
+    path: ../screenshots/maestro_share_join_01_input_header
+
+# AC1 (F-03): 招待コード入力欄 (share-input-code) 表示確認
+- assertVisible:
+    id: "share-input-code"
+- takeScreenshot:
+    path: ../screenshots/maestro_share_join_02_input_code
+
+# 「次へ」ボタン (share-input-next) 表示 (空入力時は disabled、コード長 6 以外で disabled)
+- assertVisible:
+    id: "share-input-next"
+- takeScreenshot:
+    path: ../screenshots/maestro_share_join_03_input_next_disabled
+
+# inputText 不可 → 実機検証時は deep link 経由でプリフィル想定:
+#   `learnapp://share/invite-code?code=123456` → SHARE-03 useEffect で code=123456 セット
+#   SHARE-03 → 「次へ」tap → SHARE-04 (params.code 経由で auto-mutate)
+#
+# Maestro 単独テストでは「ボタン表示」のみ、実機 deep link 検証は L5 手動 E2E (本セッション Task 3 計画書)
+
+# 戻る (share-input-back) tap でメイン領域復帰確認
+- runFlow:
+    when:
+      visible:
+        id: "share-input-back"
+    commands:
+      - tapOn:
+          id: "share-input-back"
+      - waitForAnimationToEnd:
+          timeout: 1500
+
+# --- 以下は SHARE-04 への deep link 経路 (実機検証時) ---
+# deep link `/share/accept?code=XXXXXX` で直行
+# Maestro YAML 内で deep link 起動は L5 手動補完想定、ここでは「SHARE-04 到達後の表示」のみ
+#
+# 想定: 別端末からテストコードで再起動 + AUTH_BYPASS 経路で SHARE-04 直行
+
+- launchApp:
+    clearState: false
+    stopApp: true
+
+- waitForAnimationToEnd:
+    timeout: 5000
+
+# SHARE-04 受諾中 (auto-mutate 中) または 成功画面到達
+# auto-mutate は useEffect で発火、即 mutate → 受諾中 (loading) → 成功 (success) または失敗 (error)
+- runFlow:
+    when:
+      visible:
+        id: "share-confirm-loading"
+    commands:
+      - assertVisible:
+          id: "share-confirm-loading"
+      - takeScreenshot:
+          path: ../screenshots/maestro_share_join_04_confirm_loading
+      - assertVisible:
+          id: "share-confirm-cancel"
+      - waitForAnimationToEnd:
+          timeout: 5000
+
+# 成功画面 (share-confirm-success) 期待
+- runFlow:
+    when:
+      visible:
+        id: "share-confirm-success"
+    commands:
+      - assertVisible:
+          id: "share-confirm-success"
+      - takeScreenshot:
+          path: ../screenshots/maestro_share_join_05_confirm_success
+      - assertVisible:
+          id: "share-confirm-household-name"
+      - takeScreenshot:
+          path: ../screenshots/maestro_share_join_06_confirm_household
+      - assertVisible:
+          id: "share-confirm-goto-home"
+      - takeScreenshot:
+          path: ../screenshots/maestro_share_join_07_confirm_goto_home
+      # AC2 (F-03): カレンダーを開く tap でメイン領域 (calendar-grid) 遷移
+      - tapOn:
+          id: "share-confirm-goto-home"
+      - waitForAnimationToEnd:
+          timeout: 3000
+      - assertVisible:
+          id: "calendar-grid"
+
+# エラー画面 (share-confirm-error) 経路 (optional、テストコード次第)
+- runFlow:
+    when:
+      visible:
+        id: "share-confirm-error"
+    commands:
+      - assertVisible:
+          id: "share-confirm-error"
+      - takeScreenshot:
+          path: ../screenshots/maestro_share_join_08_error_invalid
+      - assertVisible:
+          id: "share-confirm-error-title"
+      - assertVisible:
+          id: "share-confirm-error-message"
+      - assertVisible:
+          id: "share-confirm-back"
+      # 戻る tap で SHARE-03 復帰確認
+      - tapOn:
+          id: "share-confirm-back"
+      - waitForAnimationToEnd:
+          timeout: 1500
+      - assertVisible:
+          id: "share-input-header"

@@ -1,0 +1,141 @@
+appId: com.miraikousou.lessonapp
+name: SHARE-02 招待コード生成 + 共有 UI (F-02)
+---
+# SHARE-02 招待コード発行画面の到達 + 発行 → コード表示 + コピー / 共有 / 期限表示確認
+# 作成: qa-2, 2026-05-16
+# 対象 Sprint: Phase D Sprint 1 (D1-T07)
+#
+# 前提:
+#   - AUTH_BYPASS=true、世帯オーナー (owner ロール)、households.is_shared=true
+#   - SHARE-01 から「家族を招待」(share-issue-button) tap で到達済前提
+#     もしくは AUTH_BYPASS + deep link で /share/issue に直行
+#
+# 注意:
+#   - inputText 使用不可 (#11/#12 継承)、コード生成は RPC create_invitation 経由
+#   - コード生成は SECURITY DEFINER RPC (#23A/#24A 継承)、Maestro は 結果表示確認のみ
+#   - 6 桁数字 (formatCodeShort で "XXX YYY") + 16 文字長コード (deeplink 用) + 24 時間有効
+#   - エラー文言: "not owner" / "collision exhausted" / "not authenticated" 3 種、L2 jest で網羅
+#   - testID: issue-* (InviteCodeIssueScreen.tsx 確認済)
+#
+# 撮影目標:
+#   01_issue_pre.png         = 発行前 (issue-pre) 状態 + 発行ボタン表示
+#   02_issue_button.png      = 「招待コードを発行」ボタン
+#   03_issue_result.png      = 発行後 (issue-result) 6 桁コードカード
+#   04_code_short.png        = issue-code-short 大表示
+#   05_copy_share.png        = コピー / 共有 ボタン
+#   06_deeplink.png          = ディープリンク表示 + 期限表示
+#   07_reissue.png           = 「新しいコードを発行」ボタン (再発行)
+#
+# 検証項目:
+#   - AC1 (F-02): 招待コード自動生成 → 6 桁数字 (issue-code-short) 表示
+#   - AC2 (F-02): 有効期限 24 時間 (issue-expires) 表示
+#   - AC3 (F-02): コピー (issue-copy) / 共有 (issue-share) ボタン動作 (tap 確認)
+#   - AC4 (F-02): ディープリンク (issue-deeplink) 表示
+#   - AC5 (F-02): 再発行 (issue-reissue) ボタン動作 (新コード差替確認)
+#
+# 範囲外 (L2 jest / L3 SEC-2 へ移譲):
+#   - エラー文言 3 種翻訳ロジック (L2 jest InviteCodeIssueScreen.test)
+#   - クリップボード実体検証 (Clipboard.setStringAsync の mock test、L2 jest)
+#   - Share intent 実体検証 (Maestro 不可能、L5 手動)
+#   - RPC レスポンスの cross-tenant 漏洩防止 (SEC-2 INV-03 で検証)
+#   - 再発行で旧コードが無効化される (L3 SEC-2 + jest mutation test)
+
+- launchApp:
+    clearState: false
+    stopApp: true
+
+- waitForAnimationToEnd:
+    timeout: 5000
+
+# SHARE-02 header 到達確認
+# 想定: SHARE-01 → share-issue-button tap で到達済、もしくは deep link `/share/issue`
+- assertVisible:
+    id: "issue-header"
+- takeScreenshot:
+    path: ../screenshots/maestro_share_issue_01_issue_pre
+
+# 発行前 (issue-pre) 状態 (params なしで到達した場合)
+- runFlow:
+    when:
+      visible:
+        id: "issue-pre"
+    commands:
+      - assertVisible:
+          id: "issue-pre"
+      - assertVisible:
+          id: "issue-button"
+      - takeScreenshot:
+          path: ../screenshots/maestro_share_issue_02_issue_button
+      # AC1: 発行ボタン tap → create_invitation RPC 実行
+      - tapOn:
+          id: "issue-button"
+      - waitForAnimationToEnd:
+          timeout: 4000
+
+# AC1: 発行後 (issue-result) 状態 → 6 桁コードカード表示
+- assertVisible:
+    id: "issue-result"
+- takeScreenshot:
+    path: ../screenshots/maestro_share_issue_03_issue_result
+
+# AC1: 6 桁コード (issue-code-card / issue-code-short)
+- assertVisible:
+    id: "issue-code-card"
+- assertVisible:
+    id: "issue-code-short"
+- takeScreenshot:
+    path: ../screenshots/maestro_share_issue_04_code_short
+
+# AC3: コピー / 共有 ボタン表示確認
+- assertVisible:
+    id: "issue-copy"
+- assertVisible:
+    id: "issue-share"
+- takeScreenshot:
+    path: ../screenshots/maestro_share_issue_05_copy_share
+
+# AC3: コピー ボタン tap (toast 表示、issue-toast)
+- tapOn:
+    id: "issue-copy"
+- waitForAnimationToEnd:
+    timeout: 1500
+
+- runFlow:
+    when:
+      visible:
+        id: "issue-toast"
+    commands:
+      - assertVisible:
+          id: "issue-toast"
+
+# AC4: ディープリンク + 期限表示
+- assertVisible:
+    id: "issue-deeplink"
+- assertVisible:
+    id: "issue-expires"
+- takeScreenshot:
+    path: ../screenshots/maestro_share_issue_06_deeplink
+
+# AC5: 再発行ボタン表示 + tap (新コード差替確認)
+- assertVisible:
+    id: "issue-reissue"
+- takeScreenshot:
+    path: ../screenshots/maestro_share_issue_07_reissue
+
+# 再発行 tap で新コード生成、確認は issue-code-short 再表示で代替
+- tapOn:
+    id: "issue-reissue"
+- waitForAnimationToEnd:
+    timeout: 4000
+
+- assertVisible:
+    id: "issue-code-short"
+
+# 戻る (issue-back) tap で SHARE-01 復帰確認
+- tapOn:
+    id: "issue-back"
+- waitForAnimationToEnd:
+    timeout: 1500
+
+- assertVisible:
+    id: "share-header"

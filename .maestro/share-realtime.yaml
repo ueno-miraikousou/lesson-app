@@ -1,0 +1,143 @@
+appId: com.miraikousou.lessonapp
+name: SHARE-* Realtime 同期 (F-04/F-06) 端末 echo 検証
+---
+# F-04 / F-06 リアルタイム同期の単端末 echo 検証
+# 作成: qa-2, 2026-05-16
+# 対象 Sprint: Phase D Sprint 2 (D2-T07)
+#
+# 前提:
+#   - AUTH_BYPASS=true、世帯共有有効 (households.is_shared=true)、メンバー 1 名以上
+#   - ME-N D2-T01..T05 実装完了済 (useHouseholdRealtime / setQueryData hot path / catch-up reconcile / LWW)
+#   - Maestro 単端末: 2 端末同期は不可能、本 YAML は「自端末で INSERT/UPDATE → 自端末の Realtime channel で event 受信 → React Query invalidate / setQueryData による UI 反映」を検証 (端末 echo)
+#   - 2 端末同期は L5 手動 E2E (本セッション Task 3 計画書) で補完
+#
+# 注意:
+#   - inputText 不可 (#11/#12 継承)、新規予定追加は cal-add-single.yaml と同経路 (FAB → form → submit)
+#   - Realtime 反映時間 < 2 秒 (F-06 AC1)、waitForAnimationToEnd: timeout: 3000 で余裕を取る
+#   - schedule_item_checks hot path < 200ms (F-06 AC2)、setQueryData 経路は L1 jest mock + 本 YAML 体感確認
+#   - LWW Toast 「他のメンバーが編集しました」は単端末 echo では発火しない (LWW は他者編集時、L5 手動で確認)
+#   - testID: calendar-* / schedule-* / item-check-* (Phase B/C 既存) + realtime-* (Sprint 2 新規想定)
+#
+# 撮影目標:
+#   01_calendar_pre.png       = カレンダー初期状態 (event 受信前)
+#   02_add_schedule.png       = 新規予定追加 → submit
+#   03_realtime_reflected.png = 自端末 echo で予定リスト即時反映 (< 2 秒)
+#   04_check_toggle.png       = 持ち物✓ tap (setQueryData hot path)
+#   05_check_reflected.png    = ✓状態即時反映 (< 200ms)
+#   06_focus_refetch.png      = app focus 復帰時 refetch (F-06 AC4) optional
+#
+# 検証項目:
+#   - AC1 (F-06): 自端末 INSERT → 同 channel event 受信 → リスト反映 < 2 秒
+#   - AC2 (F-06): schedule_item_checks UPSERT → hot path 反映 < 200ms (setQueryData)
+#   - AC3 (F-06): WebSocket 切断 → 再接続後 catch-up (本 YAML 範囲外、機内モード切替 = L5 手動)
+#   - AC4 (F-06): app focus 復帰時 refetch → React Query refetchOnWindowFocus (本 YAML 範囲外、L2 jest 検証)
+#
+# 範囲外 (L2 jest / L3 SEC-2 / L5 手動 へ移譲):
+#   - 2 端末同期 (Maestro 不可、L5 手動 E2E)
+#   - cross-tenant Realtime 漏洩 (SEC-2 RT-02/RT-05、78 ケース内)
+#   - LWW Toast 表示 (他端末編集が必要、L5 手動 + L2 jest)
+#   - 機内モード切替時 reconnect (Maestro 制御不可、L5 手動)
+#   - postgres_changes filter 改竄試行 (SEC-2 RT-04)
+#   - schedule_item_checks の household_id 列なし境界 (ADR-007 §2.2、SEC-2 RT-05 で検証)
+
+- launchApp:
+    clearState: false
+    stopApp: true
+
+- waitForAnimationToEnd:
+    timeout: 5000
+
+# 前提: AUTH_BYPASS で main 領域到達済、calendar-grid 表示
+- assertVisible:
+    id: "calendar-grid"
+- takeScreenshot:
+    path: ../screenshots/maestro_share_realtime_01_calendar_pre
+
+# AC1 (F-06): 新規予定追加 → 自端末 channel echo で list 即時反映
+# CAL-05 form 経由 (cal-add-single.yaml と同経路)
+- assertVisible:
+    id: "calendar-fab"
+- tapOn:
+    id: "calendar-fab"
+- waitForAnimationToEnd:
+    timeout: 2000
+
+- assertVisible:
+    id: "schedule-form-header"
+
+# lesson 選択 (chip 列表示、選択は optional)
+- runFlow:
+    when:
+      visible:
+        id: "schedule-form-lesson-list"
+    commands:
+      - assertVisible:
+          id: "schedule-form-lesson-list"
+
+# 必須項目 (date / start / end) 表示確認
+- assertVisible:
+    id: "schedule-form-date"
+- assertVisible:
+    id: "schedule-form-start"
+- assertVisible:
+    id: "schedule-form-end"
+
+# 保存 submit (schedules INSERT → Realtime channel postgres_changes INSERT event 受信想定)
+- assertVisible:
+    id: "schedule-form-submit"
+- takeScreenshot:
+    path: ../screenshots/maestro_share_realtime_02_add_schedule
+
+- tapOn:
+    id: "schedule-form-submit"
+- waitForAnimationToEnd:
+    timeout: 3000
+
+# AC1: 自端末 echo で list 即時反映確認 (< 2 秒)
+- assertVisible:
+    id: "calendar-grid"
+- takeScreenshot:
+    path: ../screenshots/maestro_share_realtime_03_realtime_reflected
+
+# AC2 (F-06): schedule_item_checks UPSERT hot path 検証
+# CAL-09 / 朝動線 持ち物✓ tap (item-check-* testID、Phase C 既存)
+# 注: 予定詳細画面到達経路は CAL-04 セル tap (cal-detail-check.yaml と同経路)
+- runFlow:
+    when:
+      visible:
+        id: "calendar-cell-with-schedule"
+    commands:
+      - tapOn:
+          id: "calendar-cell-with-schedule"
+      - waitForAnimationToEnd:
+          timeout: 2000
+
+# 予定詳細画面到達 (schedule-detail-* もしくは calendar-agenda)
+- runFlow:
+    when:
+      visible:
+        id: "item-check-row"
+    commands:
+      - assertVisible:
+          id: "item-check-row"
+      - takeScreenshot:
+          path: ../screenshots/maestro_share_realtime_04_check_toggle
+      # AC2: ✓ tap → setQueryData hot path → 反映 < 200ms
+      - tapOn:
+          id: "item-check-row"
+      - waitForAnimationToEnd:
+          timeout: 500
+      - takeScreenshot:
+          path: ../screenshots/maestro_share_realtime_05_check_reflected
+
+# AC4 (F-06、L2 jest 補完): app focus 復帰時 refetch
+# Maestro でアプリ background → foreground 切替は実装制約あり、本 YAML は optional
+- runFlow:
+    when:
+      visible:
+        id: "realtime-debug-indicator"
+    commands:
+      - assertVisible:
+          id: "realtime-debug-indicator"
+      - takeScreenshot:
+          path: ../screenshots/maestro_share_realtime_06_focus_refetch

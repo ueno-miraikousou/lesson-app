@@ -1,0 +1,98 @@
+appId: com.miraikousou.lessonapp
+name: SHARE-01 家族共有設定画面表示 + 招待コード発行 entry (F-01)
+---
+# SHARE-01 家族共有設定画面の到達 + 主要 UI 確認 + 「家族を招待」ボタンで SHARE-02 への遷移
+# 作成: qa-2, 2026-05-16
+# 対象 Sprint: Phase D Sprint 1 (D1-T07)
+#
+# 前提:
+#   - AUTH_BYPASS=true (UUID v4 形式 MOCK_HOUSEHOLD_ID + isAuthBypassEnabled、#34M 継承)
+#   - メイン領域到達済 (calendar / lesson / profile)、もしくは設定画面到達済
+#   - 世帯共有有効化済 (households.is_shared=true 期待、L2 jest で先行検証)
+#
+# 注意:
+#   - inputText 使用不可 (#11/#12 継承)、Maestro は表示確認 + tap nav のみ
+#   - 招待コード発行は SECURITY DEFINER RPC 経由 (#23A/#24A 継承)、本 YAML では entry のみ
+#   - SHARE-01 招待一覧は最大 3 件 (INVITATION.MAX_ACTIVE_PER_HOUSEHOLD)、空状態テスト含む
+#   - testID: share-* (HouseholdShareScreen.tsx 確認済)
+#
+# 撮影目標:
+#   01_entry.png            = メイン → 設定 → 家族共有 (share-header 表示)
+#   02_household_card.png   = 世帯名 / 共有バッジ / メンバー数表示
+#   03_invitations_list.png = 有効招待コード一覧 (空 or 1-3 件)
+#   04_issue_button.png     = 「家族を招待」ボタン表示
+#   05_navigated_issue.png  = SHARE-02 遷移確認 (issue-header 表示)
+#
+# 検証項目:
+#   - AC1 (F-01): 設定→「家族を招待」入口到達 → share-header / share-household 表示
+#   - AC2 (F-01): 世帯名 + 共有状態バッジ + メンバー数表示
+#   - AC3 (F-01): 招待コード発行ボタン (share-issue-button) tap で SHARE-02 (issue-header) 遷移
+#   - AC4 (F-01): 有効招待コード一覧 (3 件まで、share-active-list) 表示
+#
+# 範囲外 (L2 jest / L3 SEC-2 へ移譲):
+#   - 招待コード自動生成 (SHARE-02 内、share-issue.yaml で検証)
+#   - 招待コード取消 RPC (L3 + jest mutation test)
+#   - cross-tenant 漏洩 (SEC-2 INV-02 で検証)
+#   - 招待コードが MAX_ACTIVE 件 (3) 到達時の disabled (L2 jest が信頼)
+
+- launchApp:
+    clearState: false
+    stopApp: true
+
+- waitForAnimationToEnd:
+    timeout: 5000
+
+# 想定: AUTH_BYPASS + main 領域到達後、家族共有画面に何らかの動線 (Profile 経由想定 / deep link 経由想定)
+# 実機検証時は deep link `/share` 経由で直接到達も可、本 YAML は到達済前提
+# (route は src/app/(main)/share.tsx 確認済 = /share に対応)
+
+# AC1: SHARE-01 header
+- assertVisible:
+    id: "share-header"
+- takeScreenshot:
+    path: ../screenshots/maestro_share_create_01_entry
+
+# AC2: 世帯情報カード (名前 / バッジ / メンバー数)
+- assertVisible:
+    id: "share-household"
+- assertVisible:
+    id: "share-household-name"
+- assertVisible:
+    id: "share-status-badge"
+- assertVisible:
+    id: "share-member-count"
+- takeScreenshot:
+    path: ../screenshots/maestro_share_create_02_household_card
+
+# AC4: 有効招待コード一覧 (空 or 1-3 件、optional)
+- assertVisible:
+    id: "share-active-list"
+- runFlow:
+    when:
+      visible:
+        id: "share-active-empty"
+    commands:
+      - assertVisible:
+          id: "share-active-empty"
+      - takeScreenshot:
+          path: ../screenshots/maestro_share_create_03_invitations_list
+
+# AC3: 「家族を招待」ボタン表示確認 + tap
+- assertVisible:
+    id: "share-issue-button"
+- takeScreenshot:
+    path: ../screenshots/maestro_share_create_04_issue_button
+
+- tapOn:
+    id: "share-issue-button"
+- waitForAnimationToEnd:
+    timeout: 2000
+
+# AC3: SHARE-02 (issue-header) 遷移確認 — share-issue.yaml に詳細委譲
+- assertVisible:
+    id: "issue-header"
+- takeScreenshot:
+    path: ../screenshots/maestro_share_create_05_navigated_issue
+
+# 戻る (share-back) tap で SHARE-01 復帰確認 (回帰確認用)
+# 注: issue-back / issue-pre は share-issue.yaml で検証、本 YAML は entry のみ
