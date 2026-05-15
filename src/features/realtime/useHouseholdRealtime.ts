@@ -54,6 +54,10 @@ import { supabase } from '../../lib/supabase';
 import { queryKeys } from '../../lib/query-client';
 import { useRealtimeToastStore } from '../../stores/realtime-toast-store';
 import type { ScheduleItemCheck } from '../../types/database';
+import {
+  cancelNotificationsForSchedule,
+  rescheduleNotificationsForSchedule,
+} from '../notifications/scheduler';
 
 /** UPDATE/DELETE 受信時のみ Toast を出す (INSERT は新規追加で自然) */
 function shouldToast(eventType: string): boolean {
@@ -127,6 +131,11 @@ export function useHouseholdRealtime(householdId: string | null): void {
 
     // ---------------------------------------------------------------
     // schedules: household_id 列なし、payload 再 validate 不能 (RLS only)
+    //
+    // Phase D Sprint 3 (ADR-008 §4.4 連動):
+    //   - INSERT / UPDATE → rescheduleNotificationsForSchedule で再予約
+    //   - DELETE → cancelNotificationsForSchedule で取消
+    //   通知再予約は best-effort、失敗時もキャッシュ invalidate は行う
     // ---------------------------------------------------------------
     channel = channel.on(
       // @supabase/supabase-js v2 の RealtimeChannel.on は 'postgres_changes' / 'system' /
@@ -137,6 +146,18 @@ export function useHouseholdRealtime(householdId: string | null): void {
       (payload: RealtimePostgresChangesPayload<Record<string, unknown>>) => {
         void queryClient.invalidateQueries({ queryKey: ['schedules'] });
         void queryClient.invalidateQueries({ queryKey: ['schedule-detail'] });
+        const row = (payload.new ?? payload.old) as { id?: string } | null;
+        const scheduleId = row?.id;
+        if (scheduleId) {
+          if (payload.eventType === 'DELETE') {
+            void cancelNotificationsForSchedule(scheduleId).catch(() => undefined);
+          } else {
+            void rescheduleNotificationsForSchedule(
+              scheduleId,
+              householdId,
+            ).catch(() => undefined);
+          }
+        }
         if (shouldToast(payload.eventType)) {
           notify('他のメンバーが編集しました');
         }

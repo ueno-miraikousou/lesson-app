@@ -11,6 +11,7 @@ import {
 } from 'react-native';
 
 import { ScreenContainer } from '../../../components/ui/ScreenContainer';
+import { rescheduleAllNotifications } from '../../../features/notifications/scheduler';
 import { useReduceMotionEnabled } from '../../../hooks/use-reduce-motion-enabled';
 import {
   playCelebrationSound,
@@ -21,6 +22,7 @@ import {
   NOTIFICATION_PREFERENCES_DEFAULTS,
   updateNotificationPreferences,
 } from '../../../lib/notification-preferences';
+import { useAuthStore } from '../../../stores/auth-store';
 import { colors } from '../../../theme/colors';
 import type { NotificationPreferences } from '../../../types/database';
 
@@ -75,6 +77,7 @@ export default function NotificationsScreen() {
   const [showDayBeforeTimePicker, setShowDayBeforeTimePicker] = useState(false);
   const [showSameDayMinutesPicker, setShowSameDayMinutesPicker] = useState(false);
   const reduceMotion = useReduceMotionEnabled();
+  const householdId = useAuthStore((s) => s.householdId);
 
   // 初期 fetch + fallback
   // 認証エラー / ネットワーク不通のとき DEFAULTS で UI を出し、画面下部にエラー文を表示。
@@ -134,6 +137,13 @@ export default function NotificationsScreen() {
       const updated = await updateNotificationPreferences(patch);
       setPrefs(updated);
       if (afterSuccess) await afterSuccess();
+      // Phase D Sprint 3 D3-T05 (ADR-008 §4.3):
+      // 設定変更後に全予約を再構築 (best-effort、失敗は画面エラーに残さない)。
+      // celebration_sound_enabled は通知 schedule に影響しないが、簡易実装として
+      // 「prefs に影響する全 patch で再構築」を一括採用。R-D8-7 対策で非同期 fire-and-forget。
+      if (householdId) {
+        void rescheduleAllNotifications(householdId).catch(() => undefined);
+      }
     } catch (e) {
       applyOptimistic(previousValue);
       setError(e instanceof Error ? e.message : '保存に失敗しました');

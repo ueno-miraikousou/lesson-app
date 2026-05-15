@@ -23,9 +23,15 @@ import { AppState } from 'react-native';
 import { type ReactNode } from 'react';
 
 import { useHouseholdRealtime } from '../useHouseholdRealtime';
+import * as scheduler from '../../notifications/scheduler';
 import { supabase } from '../../../lib/supabase';
 import { useRealtimeToastStore } from '../../../stores/realtime-toast-store';
 import type { ScheduleItemCheck } from '../../../types/database';
+
+jest.mock('../../notifications/scheduler', () => ({
+  cancelNotificationsForSchedule: jest.fn(() => Promise.resolve(0)),
+  rescheduleNotificationsForSchedule: jest.fn(() => Promise.resolve({ cancelled: 0, scheduled: 0 })),
+}));
 
 type Handler = (payload: { eventType: string; new?: unknown; old?: unknown }) => void;
 
@@ -331,6 +337,52 @@ describe('useHouseholdRealtime (L2 integration)', () => {
     unmount();
     expect(supabaseMock.removeChannel).toHaveBeenCalledWith(channelMock);
     expect(appStateSubscriptionRemove).toHaveBeenCalled();
+  });
+
+  describe('schedules イベント → scheduler 再予約 (Phase D Sprint 3 D3-T01)', () => {
+    const rescheduleMock = scheduler.rescheduleNotificationsForSchedule as jest.Mock;
+    const cancelMock = scheduler.cancelNotificationsForSchedule as jest.Mock;
+
+    beforeEach(() => {
+      rescheduleMock.mockClear();
+      cancelMock.mockClear();
+    });
+
+    it('schedules INSERT 受信 → rescheduleNotificationsForSchedule(scheduleId, householdId)', () => {
+      renderHook(() => useHouseholdRealtime('hh-1'), { wrapper });
+      channelMock.__handlers.schedules({
+        eventType: 'INSERT',
+        new: { id: 'sch-new' },
+      });
+      expect(rescheduleMock).toHaveBeenCalledWith('sch-new', 'hh-1');
+      expect(cancelMock).not.toHaveBeenCalled();
+    });
+
+    it('schedules UPDATE 受信 → reschedule 呼出', () => {
+      renderHook(() => useHouseholdRealtime('hh-1'), { wrapper });
+      channelMock.__handlers.schedules({
+        eventType: 'UPDATE',
+        new: { id: 'sch-upd' },
+      });
+      expect(rescheduleMock).toHaveBeenCalledWith('sch-upd', 'hh-1');
+    });
+
+    it('schedules DELETE 受信 → cancelNotificationsForSchedule のみ呼出', () => {
+      renderHook(() => useHouseholdRealtime('hh-1'), { wrapper });
+      channelMock.__handlers.schedules({
+        eventType: 'DELETE',
+        old: { id: 'sch-del' },
+      });
+      expect(cancelMock).toHaveBeenCalledWith('sch-del');
+      expect(rescheduleMock).not.toHaveBeenCalled();
+    });
+
+    it('payload に id がない異常データは reschedule/cancel 呼ばず', () => {
+      renderHook(() => useHouseholdRealtime('hh-1'), { wrapper });
+      channelMock.__handlers.schedules({ eventType: 'UPDATE', new: {} });
+      expect(rescheduleMock).not.toHaveBeenCalled();
+      expect(cancelMock).not.toHaveBeenCalled();
+    });
   });
 
   it('householdId 変化で旧 channel が removeChannel され、新 channel が作成される', () => {

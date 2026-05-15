@@ -95,6 +95,34 @@ jest.mock('expo-linking', () => ({
 }));
 
 // ---------------------------------------------------------------
+// expo-notifications (Phase D Sprint 3 D3-T01)
+// scheduler / response-handler の単体テストで上書き可能、既定は no-op
+// ---------------------------------------------------------------
+jest.mock('expo-notifications', () => ({
+  scheduleNotificationAsync: jest.fn(() => Promise.resolve('mock-notif-id')),
+  cancelScheduledNotificationAsync: jest.fn(() => Promise.resolve()),
+  cancelAllScheduledNotificationsAsync: jest.fn(() => Promise.resolve()),
+  getAllScheduledNotificationsAsync: jest.fn(() => Promise.resolve([])),
+  getPermissionsAsync: jest.fn(() =>
+    Promise.resolve({ status: 'granted', granted: true, canAskAgain: true }),
+  ),
+  requestPermissionsAsync: jest.fn(() =>
+    Promise.resolve({ status: 'granted', granted: true, canAskAgain: true }),
+  ),
+  addNotificationResponseReceivedListener: jest.fn(() => ({ remove: jest.fn() })),
+  getLastNotificationResponseAsync: jest.fn(() => Promise.resolve(null)),
+  SchedulableTriggerInputTypes: {
+    DATE: 'date',
+    TIME_INTERVAL: 'timeInterval',
+    DAILY: 'daily',
+    WEEKLY: 'weekly',
+    MONTHLY: 'monthly',
+    YEARLY: 'yearly',
+    CALENDAR: 'calendar',
+  },
+}));
+
+// ---------------------------------------------------------------
 // Haptics
 // ---------------------------------------------------------------
 jest.mock('expo-haptics', () => ({
