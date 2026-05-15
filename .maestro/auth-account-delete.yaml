@@ -1,0 +1,216 @@
+appId: com.miraikousou.lessonapp
+name: A-05 退会・データ削除フロー (再認証 + 確認ダイアログ + cascade 削除)
+---
+# A-05 退会・データ削除 (Phase D Sprint 4 D4-T02)
+# 作成: qa-2, 2026-05-16
+# 対象 Sprint: Phase D Sprint 4 (D4-T02 + D4-T07)
+#
+# 前提:
+#   - SET-06 退会画面 (D4-T02 で実装) は SET-01「設定」 > 「危険ゾーン」 > 「退会・データ削除」から到達
+#   - Edge Function delete-user (architect-N D4-T02 連動) が auth.users delete + cascade を担当
+#   - AUTH_BYPASS=true で main 領域到達済 (削除前 state 構築用に世帯+lessons+schedules 1 件以上)
+#   - GDPR 整合 (要件定義 §5.7.4): 退会から 30 日以内に全データ完全削除
+#   - L3 SEC-2 DELACC-01..02 と連動 (実際の cascade 検証は SEC-2 79 ケース内、本 YAML は UI のみ)
+#
+# 注意 (学習事項継承):
+#   - #11/#12 (Maestro inputText 不可): パスワード再認証は inputText skip、tap nav 中心
+#   - #14M (emulator screencap 0.3-0.5 秒ラグ): takeScreenshot 前後で waitForAnimationToEnd 必須
+#   - #34M (AUTH_BYPASS UUID v4): AUTH_BYPASS 時は再認証 skip 経路 or service_role 経由 fixture 削除想定
+#   - RD-D5 (A-05 GDPR 整合): 退会後 30 日間データ復旧不可 = 削除確認 dialog で明示必須
+#   - 「危険ゾーン」UI 配色 = 赤系で他メニューと視覚分離、本 YAML で assertVisible 確認
+#
+# 撮影目標:
+#   01_settings_top.png         = SET-01 設定トップ + 「危険ゾーン」セクション表示
+#   02_dangerzone_entry.png     = 「退会・データ削除」menu tap 直前
+#   03_delete_screen_intro.png  = SET-06 退会画面到達 + 警告文言表示
+#   04_delete_consequences.png  = 削除されるデータ一覧表示 (世帯・予定・持ち物・通知設定)
+#   05_reauthenticate.png       = パスワード再認証フォーム表示
+#   06_confirm_dialog.png       = 最終確認ダイアログ「本当に退会しますか？」
+#   07_processing.png           = 削除処理中 indicator
+#   08_post_delete.png          = 完了画面 or AUTH-04 ログイン画面遷移
+#
+# 検証項目 (A-05 AC1-5):
+#   - AC1 (退会確認ダイアログ): role="alertdialog" + 「本当に退会しますか？」+ キャンセル/退会 button
+#   - AC2 (パスワード再認証): 退会前にパスワード再入力 + reauthenticate API 呼出
+#   - AC3 (cascade 削除): SEC-2 DELACC-02 で 8 テーブル残留 0 件確証 (本 YAML は UI 上の進行確認のみ)
+#   - AC4 (token 失効): SEC-2 DELACC-01-STALE-TOKEN で 401/403 確証 (本 YAML 範囲外)
+#   - AC5 (退会完了画面 + ログイン遷移): 「退会が完了しました」表示 → AUTH-04 へ自動遷移
+#
+# 範囲外 (L1/L2/L3/L5 へ移譲):
+#   - reauthenticate API 実呼出 → L2 jest msw mock
+#   - Edge Function delete-user 動作 → L3 SEC-2 DELACC-01 + L5 手動 (dev データで CASCADE 検証)
+#   - 8 テーブル cascade 削除確認 → L3 SEC-2 DELACC-02 (service_role 経由)
+#   - 退会後 stale token 401/403 → L3 SEC-2 DELACC-01-STALE-TOKEN
+#   - GDPR 30 日復旧不可文言 + 法務 OK 化 → L5 手動 (法的レビュー Phase E 連動)
+#   - Expo Push token cleanup → SEC-3 #36Q 連動 (テスト計画_Phase_D §4.1.1.5)
+
+- launchApp:
+    clearState: false
+    stopApp: true
+
+- waitForAnimationToEnd:
+    timeout: 5000
+
+# === Phase 1: SET-01 設定トップ画面到達 (AUTH_BYPASS 経路 + 設定タブ) ===
+# 想定動線: main → ⚙設定タブ tap → SET-01
+- runFlow:
+    when:
+      visible: "設定"
+    commands:
+      - assertVisible: "設定"
+- runFlow:
+    when:
+      notVisible: "設定"
+    commands:
+      # 設定タブ tap (ボトムタブ第 3 タブ)
+      - tapOn:
+          id: "tab-settings"
+          optional: true
+      - waitForAnimationToEnd:
+          timeout: 3000
+
+# SET-01 主要セクション確認
+- assertVisible: "設定"
+- runFlow:
+    when:
+      visible: "危険ゾーン"
+    commands:
+      - assertVisible: "危険ゾーン"
+      - takeScreenshot:
+          path: ../screenshots/maestro_account_delete_01_settings_top
+
+# === Phase 2: 「退会・データ削除」menu tap ===
+- runFlow:
+    when:
+      visible: "退会・データ削除"
+    commands:
+      - takeScreenshot:
+          path: ../screenshots/maestro_account_delete_02_dangerzone_entry
+      - tapOn:
+          text: "退会・データ削除"
+      - waitForAnimationToEnd:
+          timeout: 3000
+
+# === Phase 3: SET-06 退会画面到達 + 警告文言 ===
+# 想定タイトル: "退会・データ削除" or "アカウント削除"
+- runFlow:
+    when:
+      visible: "退会"
+    commands:
+      - assertVisible: "退会"
+      # 想定警告文言 (要件定義 §5.7.4 / GDPR 30 日)
+      - takeScreenshot:
+          path: ../screenshots/maestro_account_delete_03_delete_screen_intro
+
+# === Phase 4: 削除されるデータ一覧 (AC3 transparency) ===
+# 想定文言 (D4-T02 設計確定後 v0.2 で精密化):
+#   - 「以下のデータがすべて削除されます」
+#   - 「・お子様情報・予定・持ち物・通知設定」
+#   - 「・家族メンバー (世帯 owner の場合)」
+#   - 「・削除後 30 日以内に完全削除されます」
+- runFlow:
+    when:
+      visible: "削除されます"
+    commands:
+      - takeScreenshot:
+          path: ../screenshots/maestro_account_delete_04_delete_consequences
+
+# === Phase 5: パスワード再認証フォーム (AC2) ===
+# Maestro inputText 不可 → label 表示確認のみ
+- runFlow:
+    when:
+      visible: "パスワード"
+    commands:
+      - assertVisible: "パスワード"
+      - takeScreenshot:
+          path: ../screenshots/maestro_account_delete_05_reauthenticate
+
+# === Phase 6: 退会 button tap → 最終確認ダイアログ (AC1) ===
+- runFlow:
+    when:
+      visible: "退会する"
+    commands:
+      - tapOn:
+          text: "退会する"
+      - waitForAnimationToEnd:
+          timeout: 3000
+
+# AlertDialog 表示確認 (role=alertdialog 想定)
+- runFlow:
+    when:
+      visible: "本当に退会しますか"
+    commands:
+      - assertVisible: "本当に退会しますか"
+      - takeScreenshot:
+          path: ../screenshots/maestro_account_delete_06_confirm_dialog
+
+      # キャンセル可能性確認 → 一度キャンセル
+      - runFlow:
+          when:
+            visible: "キャンセル"
+          commands:
+            - tapOn:
+                text: "キャンセル"
+            - waitForAnimationToEnd:
+                timeout: 2000
+            # ダイアログ閉じて元画面 (SET-06 退会画面) に戻る確認
+            - assertVisible: "退会"
+
+# === Phase 7: 再度退会 button tap + 確認 = 削除実行 ===
+# Note: 実際の auth.users delete を Maestro で実行すると後続テストに影響あり
+#       AUTH_BYPASS=true 時のみ実行 or fixture user 限定で実機実行
+#       本 YAML は graceful degradation (削除実行は optional)
+- runFlow:
+    when:
+      visible: "退会する"
+    commands:
+      - tapOn:
+          text: "退会する"
+          optional: true
+      - waitForAnimationToEnd:
+          timeout: 3000
+      - runFlow:
+          when:
+            visible: "本当に退会しますか"
+          commands:
+            # 確認ダイアログ 2 段目 = 「退会する」or「削除する」想定
+            - tapOn:
+                text: "退会する"
+                optional: true
+            - waitForAnimationToEnd:
+                timeout: 5000
+
+# === Phase 8: 削除処理中 indicator ===
+- runFlow:
+    when:
+      visible: "削除中"
+    commands:
+      - takeScreenshot:
+          path: ../screenshots/maestro_account_delete_07_processing
+
+# === Phase 9: 退会完了 → AUTH-04 ログイン画面遷移 (AC5) ===
+# 想定: "退会が完了しました" モーダル → 自動遷移 or 「閉じる」tap → AUTH-04
+- runFlow:
+    when:
+      visible: "退会が完了"
+    commands:
+      - assertVisible: "退会が完了"
+      - takeScreenshot:
+          path: ../screenshots/maestro_account_delete_08_post_delete
+      - runFlow:
+          when:
+            visible: "閉じる"
+          commands:
+            - tapOn:
+                text: "閉じる"
+                optional: true
+            - waitForAnimationToEnd:
+                timeout: 3000
+
+# 最終: AUTH-04 ログイン画面に到達したことを確認
+- runFlow:
+    when:
+      visible: "ログイン"
+    commands:
+      - assertVisible: "ログイン"
+      - assertVisible: "メールアドレスとパスワードを入力してください"

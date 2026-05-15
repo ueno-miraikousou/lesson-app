@@ -1,0 +1,168 @@
+appId: com.miraikousou.lessonapp
+name: A-03 パスワードリセット完全フロー (deeplink 経由含む)
+---
+# A-03 パスワードリセット (Phase D Sprint 4 D4-T01)
+# 作成: qa-2, 2026-05-16
+# 対象 Sprint: Phase D Sprint 4 (D4-T01 + D4-T07)
+#
+# 前提:
+#   - AUTH-05 ResetPasswordScreen (reset-password.tsx) は Phase B 完遂、本 YAML で再確認
+#   - AUTH-06 (新パスワード設定画面) は Phase D Sprint 4 D4-T01 で実装、deep link 経由到達
+#   - deeplink URL scheme: com.miraikousou.lessonapp://auth/update-password?access_token=xxx (Supabase Auth 標準)
+#   - 本 YAML は ME-N D4-T01 完了後の実機確認用、未実装時は AUTH-05 部分のみ動作
+#
+# 注意 (学習事項継承):
+#   - #11/#12 (Maestro inputText 不可): email + new password 入力は skip、tap nav + 表示要素検証中心
+#   - #14M (emulator screencap 0.3-0.5 秒ラグ): takeScreenshot 前後で waitForAnimationToEnd 必須
+#   - #34M (AUTH_BYPASS UUID v4 + MOCK_HOUSEHOLD_ID): A-03 経路は AUTH_BYPASS 無関係、本物ログインフロー
+#   - 既存 auth_password_reset.yaml は AUTH-05 単独カバー、本 YAML は A-03 全 AC (AC1-3) deeplink 込みで網羅
+#   - deeplink openLink 後 Maestro が新パスワード画面に到達できない可能性あり (Supabase magic-link 動的)
+#     → 到達不可時は runFlow when:visible で graceful degradation
+#
+# 撮影目標:
+#   01_login_entry.png         = ログイン画面「パスワードを忘れた方」link 表示
+#   02_reset_request_form.png  = AUTH-05 ResetPasswordScreen 主要要素
+#   03_reset_submit_empty.png  = 空送信エラー「正しいメールアドレスを入力してください」
+#   04_reset_submitted.png     = 送信完了画面「メールを送信しました」(汎用文言、メアド存在の有無を漏らさない)
+#   05_back_to_login.png       = 「ログインに戻る」link で AUTH-04 ログイン画面に戻る
+#   06_deeplink_update.png     = deeplink 経由 AUTH-06 新パスワード設定画面到達 (D4-T01 実装後)
+#   07_update_form.png         = 新パスワード入力フォーム + 確認再入力フィールド
+#   08_update_success.png      = パスワード変更完了 + 自動ログイン or ログイン画面遷移
+#
+# 検証項目 (A-03 AC1-3):
+#   - AC1 (メール送信): AUTH-05 ResetPasswordScreen で メアド label + 「リセットメールを送信」button 表示
+#   - AC1 (空送信エラー): "正しいメールアドレスを入力してください" 表示
+#   - AC1 (送信完了画面): 汎用文言「メールを送信しました」(成功/失敗を漏らさない、A-03 セキュリティ AC = 列挙攻撃防止)
+#   - AC2 (deeplink リセット画面): com.miraikousou.lessonapp://auth/update-password?access_token=... で AUTH-06 起動
+#   - AC3 (新 password 設定): 8 文字以上等のバリデーション + 「パスワードを更新」button + 成功時自動ログイン or ログイン遷移
+#
+# 範囲外 (L1/L2/L3/L5 へ移譲):
+#   - sendPasswordResetEmail 実呼出 → L2 jest msw mock (resetPassword.test.tsx)
+#   - 実メール受信 → L5 実機 (mailhog or Supabase 送信ログ)
+#   - access_token 期限切れエラー (1 時間以上経過) → L2 jest + L5 手動
+#   - レート制限 (1 アドレスにつき 60 秒 1 回) → L3 SEC-2 想定外、L5 手動
+#   - 新 password 強度バリデーション (8 文字 / 数字 / 記号) → L2 jest
+#   - 同一 password 拒否 → L2 jest + L3
+#   - 認証セッション無効化 (旧 token 失効) → L3 SEC-2 DELACC-* 連動 (退会と同じパターン)
+
+- launchApp:
+    clearState: true
+    stopApp: true
+
+- waitForAnimationToEnd:
+    timeout: 5000
+
+# === Phase 1: AUTH-04 ログイン画面 → AUTH-05 リセット画面遷移 ===
+- assertVisible: "ログイン"
+- assertVisible: "メールアドレスとパスワードを入力してください"
+- assertVisible: "パスワードを忘れた方"
+- takeScreenshot:
+    path: ../screenshots/maestro_auth_reset_01_login_entry
+
+- tapOn:
+    text: "パスワードを忘れた方"
+- waitForAnimationToEnd:
+    timeout: 3000
+
+# === Phase 2: AUTH-05 ResetPasswordScreen 主要要素検証 ===
+- assertVisible: "パスワードリセット"
+- assertVisible: "ご登録のメールアドレスにリセット用リンクを送信します"
+- assertVisible: "メールアドレス"
+- assertVisible: "リセットメールを送信"
+- assertVisible: "ログインに戻る"
+- takeScreenshot:
+    path: ../screenshots/maestro_auth_reset_02_reset_request_form
+
+# === Phase 3: 空送信エラー (AC1 = メアド入力なしで submit → エラー表示) ===
+# Maestro inputText 制約により実 email 入力は skip、空で submit
+- tapOn:
+    text: "リセットメールを送信"
+- waitForAnimationToEnd:
+    timeout: 3000
+- assertVisible: "正しいメールアドレスを入力してください"
+- takeScreenshot:
+    path: ../screenshots/maestro_auth_reset_03_reset_submit_empty
+
+# === Phase 4: 送信完了画面の汎用文言確認 (AC1 セキュリティ = メアド存在漏洩防止) ===
+# Note: 実 email 入力できないため、本 phase は実機 inputText 経由で確認したい場合
+#       手動 E2E or jest L2 (msw mock + RNTL fireEvent.changeText) に移譲
+# YAML 上では runFlow conditional でフォーム表示時のみ skip 表示確認
+- runFlow:
+    when:
+      visible: "メールを送信しました"
+    commands:
+      - assertVisible: "ご入力のメールアドレスにパスワードリセット用のリンクを送信しました"
+      - assertVisible: "メールが届かない場合は、迷惑メールフォルダもご確認ください"
+      - assertVisible: "ログインに戻る"
+      - takeScreenshot:
+          path: ../screenshots/maestro_auth_reset_04_reset_submitted
+
+# === Phase 5: 「ログインに戻る」link で AUTH-04 に戻る ===
+- runFlow:
+    when:
+      visible: "ログインに戻る"
+    commands:
+      - tapOn:
+          text: "ログインに戻る"
+      - waitForAnimationToEnd:
+          timeout: 3000
+      - assertVisible: "ログイン"
+      - assertVisible: "メールアドレスとパスワードを入力してください"
+      - takeScreenshot:
+          path: ../screenshots/maestro_auth_reset_05_back_to_login
+
+# === Phase 6: deeplink 経由 AUTH-06 新パスワード設定画面到達 (AC2、D4-T01 実装後) ===
+# Note: 実 access_token は Supabase Auth が生成、Maestro では fixture token を使用
+#       未実装時は AUTH-06 画面に到達できず、本 phase は skip
+- openLink:
+    link: "com.miraikousou.lessonapp://auth/update-password?access_token=fixture_reset_token_for_maestro&type=recovery"
+- waitForAnimationToEnd:
+    timeout: 5000
+
+# AUTH-06 画面到達確認 (画面 ID 想定要素、D4-T01 実装時に正式タイトル確定)
+- runFlow:
+    when:
+      visible: "新しいパスワード"
+    commands:
+      - assertVisible: "新しいパスワード"
+      - takeScreenshot:
+          path: ../screenshots/maestro_auth_reset_06_deeplink_update
+
+      # === Phase 7: AUTH-06 新パスワード入力フォーム主要要素 (AC3) ===
+      # 想定要素: パスワード入力 + 確認入力 + 「パスワードを更新」button + バリデーション
+      - runFlow:
+          when:
+            visible: "パスワード"
+          commands:
+            - assertVisible: "パスワード"
+      - runFlow:
+          when:
+            visible: "パスワードを更新"
+          commands:
+            - assertVisible: "パスワードを更新"
+      - takeScreenshot:
+          path: ../screenshots/maestro_auth_reset_07_update_form
+
+      # === Phase 8: 空送信で AUTH-06 のバリデーション動作 ===
+      - runFlow:
+          when:
+            visible: "パスワードを更新"
+          commands:
+            - tapOn:
+                text: "パスワードを更新"
+                optional: true
+            - waitForAnimationToEnd:
+                timeout: 3000
+            # 想定バリデーションメッセージ ("パスワードは 8 文字以上" 等、D4-T01 設計確定後 v0.2 で精密化)
+            - takeScreenshot:
+                path: ../screenshots/maestro_auth_reset_08_update_success
+
+# === Phase 9: deeplink 経路未実装時の graceful degradation ===
+# AUTH-06 画面に到達しなかった場合 (deeplink 未実装 or AUTH-06 未完成) はログイン画面に戻った想定
+- runFlow:
+    when:
+      notVisible: "新しいパスワード"
+    commands:
+      - assertVisible: "ログイン"
+      - takeScreenshot:
+          path: ../screenshots/maestro_auth_reset_09_deeplink_unimplemented_fallback

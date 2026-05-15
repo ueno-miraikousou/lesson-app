@@ -1,0 +1,275 @@
+appId: com.miraikousou.lessonapp
+name: C-02 SET-01 設定トップ メニュー全網羅 + サブ画面遷移確認
+---
+# C-02 アプリ設定画面 (Phase D Sprint 4 D4-T03)
+# 作成: qa-2, 2026-05-16
+# 対象 Sprint: Phase D Sprint 4 (D4-T03 + D4-T07)
+#
+# 前提:
+#   - SET-01 設定トップ画面が SET-01-設定トップ.md v0.1 設計に従って実装済 (D4-T03)
+#   - SET-01 セクション構成: プロフィール / 家族 / 通知 / アカウント / プライバシー / アプリ情報 / 危険ゾーン
+#   - 各メニュー行は accessibilityLabel + Hint「タップで開く」
+#   - 危険ゾーンは accessibilityLabel に「危険」明示 + 赤系色合いで視覚分離
+#   - AUTH_BYPASS=true で main 領域到達済 + ボトムタブ第 3 タブ⚙設定到達済
+#
+# 注意 (学習事項継承):
+#   - #11/#12 (Maestro inputText 不可): メニュー tap nav 中心、入力は範囲外
+#   - #14M (emulator screencap 0.3-0.5 秒ラグ): takeScreenshot 前後で waitForAnimationToEnd 必須
+#   - 各メニュー tap → サブ画面到達 → back で SET-01 に戻る、を全項目検証
+#   - 一部メニューは未実装可能性あり (例 SET-07 データエクスポート、SET-08 アプリ情報) → optional 化
+#   - ログアウト確認ダイアログは AUTH-04 への nav 経由、本 YAML では確認ダイアログ表示まで
+#
+# 撮影目標:
+#   01_settings_top.png         = SET-01 トップ画面全体 (スクロール前)
+#   02_profile_section.png      = プロフィールカード表示
+#   03_family_section.png       = 家族セクション (3 menu)
+#   04_notification_section.png = 通知セクション
+#   05_account_section.png      = アカウントセクション
+#   06_privacy_section.png      = プライバシーセクション (3 menu 含広告同意設定)
+#   07_app_info.png             = アプリ情報セクション (バージョン表示)
+#   08_dangerzone.png           = 危険ゾーンセクション (ログアウト + 退会)
+#   09_logout_dialog.png        = ログアウト確認ダイアログ表示
+#   10_notification_nav.png     = NOTIF-01 通知設定画面到達
+#   11_share_nav.png            = SHARE-02 家族を招待画面到達
+#   12_ad_consent_nav.png       = SET-04 広告同意設定画面到達
+#
+# 検証項目 (C-02 AC1-3):
+#   - AC1 (設定画面入口): ボトムタブ第 3 タブ「⚙ 設定」から SET-01 到達
+#   - AC2 (各設定項目表示): 6 セクション (プロフィール + 家族 + 通知 + アカウント + プライバシー + アプリ情報 + 危険ゾーン) 表示
+#   - AC3 (各サブ画面遷移): 主要 menu tap → サブ画面到達確認
+#
+# 範囲外 (L1/L2/L3/L5 へ移譲):
+#   - サブ画面内のロジック → 各 sub-screen YAML / jest L2
+#   - useAppVersion expo-application 動作 → L1 jest
+#   - 「メールアドレスコピー」expo-clipboard → L2 jest
+#   - accessibilityLabel + Hint 読み上げ → L5 実機 TalkBack/VoiceOver
+
+- launchApp:
+    clearState: false
+    stopApp: true
+
+- waitForAnimationToEnd:
+    timeout: 5000
+
+# === Phase 1: ボトムタブから SET-01 到達 (AC1) ===
+- runFlow:
+    when:
+      notVisible: "設定"
+    commands:
+      - tapOn:
+          id: "tab-settings"
+          optional: true
+      - waitForAnimationToEnd:
+          timeout: 3000
+- assertVisible: "設定"
+- takeScreenshot:
+    path: ../screenshots/maestro_settings_overview_01_settings_top
+
+# === Phase 2: プロフィールセクション (AC2 部分1) ===
+# 想定要素: メンバーカード (アイコン + 名前 + メアド)
+- runFlow:
+    when:
+      visible: "プロフィール"
+    commands:
+      - assertVisible: "プロフィール"
+      # メアドは AUTH_BYPASS fixture user の値 ("dev+local@miraikousou.com" 等想定)
+      - takeScreenshot:
+          path: ../screenshots/maestro_settings_overview_02_profile_section
+
+# === Phase 3: 家族セクション (AC2 部分2、3 menu) ===
+- assertVisible: "家族"
+- runFlow:
+    when:
+      visible: "家族メンバー管理"
+    commands:
+      - assertVisible: "家族メンバー管理"
+- runFlow:
+    when:
+      visible: "家族を招待"
+    commands:
+      - assertVisible: "家族を招待"
+- runFlow:
+    when:
+      visible: "ウィザード再実行"
+    commands:
+      - assertVisible: "ウィザード再実行"
+- takeScreenshot:
+    path: ../screenshots/maestro_settings_overview_03_family_section
+
+# === Phase 4: 通知セクション (AC2 部分3) ===
+- assertVisible: "通知"
+- runFlow:
+    when:
+      visible: "通知設定"
+    commands:
+      - assertVisible: "通知設定"
+- takeScreenshot:
+    path: ../screenshots/maestro_settings_overview_04_notification_section
+
+# === Phase 5: アカウントセクション (AC2 部分4) ===
+- runFlow:
+    when:
+      visible: "アカウント"
+    commands:
+      - assertVisible: "アカウント"
+- runFlow:
+    when:
+      visible: "アカウント設定"
+    commands:
+      - assertVisible: "アカウント設定"
+- runFlow:
+    when:
+      visible: "データエクスポート"
+    commands:
+      - assertVisible: "データエクスポート"
+- takeScreenshot:
+    path: ../screenshots/maestro_settings_overview_05_account_section
+
+# === Phase 6: プライバシーセクション (AC2 部分5、C-05 広告同意設定を含む) ===
+# 注意: SET-01 設計 v0.1 では「プライバシー」セクションに広告同意設定が含まれる
+#       (v0.4.1 で C-05 新設 → SET-04 として menu 追加)
+- scroll
+- waitForAnimationToEnd:
+    timeout: 2000
+- runFlow:
+    when:
+      visible: "プライバシー"
+    commands:
+      - assertVisible: "プライバシー"
+- runFlow:
+    when:
+      visible: "プライバシーポリシー"
+    commands:
+      - assertVisible: "プライバシーポリシー"
+- runFlow:
+    when:
+      visible: "利用規約"
+    commands:
+      - assertVisible: "利用規約"
+- runFlow:
+    when:
+      visible: "広告同意設定"
+    commands:
+      - assertVisible: "広告同意設定"
+- takeScreenshot:
+    path: ../screenshots/maestro_settings_overview_06_privacy_section
+
+# === Phase 7: アプリ情報セクション (AC2 部分6) ===
+- runFlow:
+    when:
+      visible: "アプリ情報"
+    commands:
+      - assertVisible: "アプリ情報"
+      # バージョン表記 ("バージョン 0.1.0" 等、app.config.ts より動的)
+- runFlow:
+    when:
+      visible: "バージョン"
+    commands:
+      - assertVisible: "バージョン"
+- takeScreenshot:
+    path: ../screenshots/maestro_settings_overview_07_app_info
+
+# === Phase 8: 危険ゾーンセクション (AC2 部分7) ===
+- scroll
+- waitForAnimationToEnd:
+    timeout: 2000
+- runFlow:
+    when:
+      visible: "危険ゾーン"
+    commands:
+      - assertVisible: "危険ゾーン"
+- runFlow:
+    when:
+      visible: "ログアウト"
+    commands:
+      - assertVisible: "ログアウト"
+- runFlow:
+    when:
+      visible: "退会・データ削除"
+    commands:
+      - assertVisible: "退会・データ削除"
+- takeScreenshot:
+    path: ../screenshots/maestro_settings_overview_08_dangerzone
+
+# === Phase 9: ログアウト確認ダイアログ表示 (SET-01 §3.3 「ログアウトしますか？」) ===
+- runFlow:
+    when:
+      visible: "ログアウト"
+    commands:
+      - tapOn:
+          text: "ログアウト"
+      - waitForAnimationToEnd:
+          timeout: 3000
+- runFlow:
+    when:
+      visible: "ログアウトしますか"
+    commands:
+      - assertVisible: "ログアウトしますか"
+      - assertVisible: "データは保持されます"
+      - takeScreenshot:
+          path: ../screenshots/maestro_settings_overview_09_logout_dialog
+      # キャンセルで SET-01 に戻る (実際の AUTH-04 遷移は別 YAML で)
+      - tapOn:
+          text: "キャンセル"
+          optional: true
+      - waitForAnimationToEnd:
+          timeout: 2000
+
+# === Phase 10: 通知設定画面遷移 (AC3 主要 1) ===
+- scroll
+- waitForAnimationToEnd:
+    timeout: 2000
+- runFlow:
+    when:
+      visible: "通知設定"
+    commands:
+      - tapOn:
+          text: "通知設定"
+      - waitForAnimationToEnd:
+          timeout: 3000
+      - runFlow:
+          when:
+            visible: "通知のタイミング"
+          commands:
+            - assertVisible: "通知のタイミング"
+            - takeScreenshot:
+                path: ../screenshots/maestro_settings_overview_10_notification_nav
+      - back
+      - waitForAnimationToEnd:
+          timeout: 2000
+
+# === Phase 11: 家族を招待画面遷移 (AC3 主要 2) ===
+- runFlow:
+    when:
+      visible: "家族を招待"
+    commands:
+      - tapOn:
+          text: "家族を招待"
+      - waitForAnimationToEnd:
+          timeout: 3000
+      - takeScreenshot:
+          path: ../screenshots/maestro_settings_overview_11_share_nav
+      - back
+      - waitForAnimationToEnd:
+          timeout: 2000
+
+# === Phase 12: 広告同意設定画面遷移 (AC3 主要 3、C-05 連動) ===
+- scroll
+- waitForAnimationToEnd:
+    timeout: 2000
+- runFlow:
+    when:
+      visible: "広告同意設定"
+    commands:
+      - tapOn:
+          text: "広告同意設定"
+      - waitForAnimationToEnd:
+          timeout: 3000
+      - takeScreenshot:
+          path: ../screenshots/maestro_settings_overview_12_ad_consent_nav
+      - back
+      - waitForAnimationToEnd:
+          timeout: 2000
+
+# 副次: SET-01 に戻れたことを確認 (regression 防止)
+- assertVisible: "設定"

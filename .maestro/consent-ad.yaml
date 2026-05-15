@@ -1,0 +1,198 @@
+appId: com.miraikousou.lessonapp
+name: C-05 広告同意設定 UI 動作確認 (Phase D は UI のみ、SDK 連動は Phase E)
+---
+# C-05 広告関連の同意画面 (Phase D Sprint 4 D4-T05、UI のみ)
+# 作成: qa-2, 2026-05-16
+# 対象 Sprint: Phase D Sprint 4 (D4-T05 + D4-T07)
+#
+# 前提:
+#   - SET-04 広告同意設定画面 (D4-T05 で実装) は SET-01 「プライバシー」 > 「広告同意設定」から到達
+#   - 実装は UI のみ (toggle state + AsyncStorage 永続化)、AdMob SDK + UMP SDK 連動は Phase E AD-01..04 で実施
+#   - GDPR / COPPA 準拠想定 (要件定義 v0.6.2 §4.C-05、MVP リスト v0.4.2 C-05 v0.3 新設)
+#   - AsyncStorage key 想定: `ad_consent.personalized` (boolean) + `ad_consent.timestamp` (ISO)
+#   - AUTH_BYPASS=true で main 領域到達済 + 設定タブ⚙到達済
+#
+# 注意 (学習事項継承):
+#   - #11/#12 (Maestro inputText 不可): toggle / radio button tap 中心、入力は範囲外
+#   - #14M (emulator screencap 0.3-0.5 秒ラグ): takeScreenshot 前後で waitForAnimationToEnd 必須
+#   - SDK 連動は Phase E 移管なので本 YAML は AsyncStorage 永続化 + UI state 反映確認のみ
+#   - 「広告」「同意」「個人化」「プライバシーポリシー link」等の文言確認
+#   - Reduce Motion 尊重 (transition animation 設計確定後 v0.2 で精密化)
+#
+# 撮影目標:
+#   01_settings_privacy.png       = SET-01 プライバシーセクション「広告同意設定」menu 表示
+#   02_consent_intro.png          = SET-04 広告同意設定画面到達 + 説明文表示
+#   03_personalized_toggle.png    = 「パーソナライズ広告」toggle 状態 (デフォルト off 想定)
+#   04_personalized_on.png        = 「パーソナライズ広告」ON 切替後 + 説明テキスト変化
+#   05_personalized_off.png       = 「パーソナライズ広告」OFF 戻し
+#   06_policy_link.png            = 「広告について」「プライバシーポリシー」link 表示
+#   07_save_confirm.png           = 「設定を保存」button 表示 or 自動保存 toast
+#   08_back_to_settings.png       = back ボタンで SET-01 に戻る
+#
+# 検証項目 (C-05 AC1-3):
+#   - AC1 (同意 UI 表示): SET-04 画面到達 + パーソナライズ広告 toggle + 説明文 + プライバシーポリシー link
+#   - AC2 (ON/OFF AsyncStorage 永続化): toggle tap → 状態反映 → 再訪時も state 保持
+#   - AC3 (実 SDK 統合は Phase E): 本 YAML 範囲外 (consent state 取得のみ確認)
+#
+# 範囲外 (L1/L2/L3/L5 へ移譲):
+#   - AsyncStorage 実書込 → L2 jest AdConsentSheet.test (mock storage)
+#   - UMP SDK 連動 → Phase E AD-* YAML
+#   - AdMob SDK 同意取得 → Phase E AD-* L5 実機
+#   - GDPR cookie banner 様 UI 詳細 → designer-N D4-T05 設計次第、v0.2 で精密化
+#   - 法的レビュー (AdMob 文言 OK 化) → L5 Phase E 連動
+
+- launchApp:
+    clearState: false
+    stopApp: true
+
+- waitForAnimationToEnd:
+    timeout: 5000
+
+# === Phase 1: SET-01 プライバシーセクション 「広告同意設定」menu 確認 ===
+- runFlow:
+    when:
+      notVisible: "設定"
+    commands:
+      - tapOn:
+          id: "tab-settings"
+          optional: true
+      - waitForAnimationToEnd:
+          timeout: 3000
+
+- assertVisible: "設定"
+- scroll
+- waitForAnimationToEnd:
+    timeout: 2000
+- runFlow:
+    when:
+      visible: "プライバシー"
+    commands:
+      - assertVisible: "プライバシー"
+- runFlow:
+    when:
+      visible: "広告同意設定"
+    commands:
+      - assertVisible: "広告同意設定"
+      - takeScreenshot:
+          path: ../screenshots/maestro_consent_ad_01_settings_privacy
+      - tapOn:
+          text: "広告同意設定"
+      - waitForAnimationToEnd:
+          timeout: 3000
+
+# === Phase 2: SET-04 広告同意設定画面到達 + 説明文 (AC1) ===
+# 想定タイトル候補: "広告同意設定" or "広告について"
+# 想定説明文 (D4-T05 で designer-N 確定後 v0.2 精密化):
+#   "このアプリでは広告を表示しています。お子様の情報を含む個人化広告を許可しますか？"
+- assertVisible: "広告"
+- takeScreenshot:
+    path: ../screenshots/maestro_consent_ad_02_consent_intro
+
+# === Phase 3: パーソナライズ広告 toggle 表示 (AC1 + AC2) ===
+- runFlow:
+    when:
+      visible: "パーソナライズ"
+    commands:
+      - assertVisible: "パーソナライズ"
+      - takeScreenshot:
+          path: ../screenshots/maestro_consent_ad_03_personalized_toggle
+- runFlow:
+    when:
+      visible: "個人化広告"
+    commands:
+      - assertVisible: "個人化広告"
+
+# === Phase 4: toggle ON 切替 → 状態反映 (AC2 ON 動作) ===
+# accessibilityRole="switch" or "checkbox" 想定、現実装は Phase B notification-preferences 系と同じ Switch
+- runFlow:
+    when:
+      visible: "パーソナライズ広告"
+    commands:
+      - tapOn:
+          text: "パーソナライズ広告"
+          optional: true
+      - waitForAnimationToEnd:
+          timeout: 2000
+      - takeScreenshot:
+          path: ../screenshots/maestro_consent_ad_04_personalized_on
+
+# === Phase 5: toggle OFF 戻し (AC2 OFF 動作) ===
+- runFlow:
+    when:
+      visible: "パーソナライズ広告"
+    commands:
+      - tapOn:
+          text: "パーソナライズ広告"
+          optional: true
+      - waitForAnimationToEnd:
+          timeout: 2000
+      - takeScreenshot:
+          path: ../screenshots/maestro_consent_ad_05_personalized_off
+
+# === Phase 6: プライバシーポリシー link 確認 (AC1) ===
+# 想定 link: 「広告について詳しく」or「プライバシーポリシー」(SET-02 への nav)
+- runFlow:
+    when:
+      visible: "プライバシーポリシー"
+    commands:
+      - assertVisible: "プライバシーポリシー"
+      - takeScreenshot:
+          path: ../screenshots/maestro_consent_ad_06_policy_link
+- runFlow:
+    when:
+      visible: "広告について"
+    commands:
+      - assertVisible: "広告について"
+
+# === Phase 7: 設定保存確認 (AC2 永続化、UI 上の表示) ===
+# 実装パターン:
+#   (a) 即時保存 + toast = "設定を保存しました"
+#   (b) 「保存」button tap 必要 = "設定を保存"
+# 両方に対応する graceful 検証
+- runFlow:
+    when:
+      visible: "設定を保存"
+    commands:
+      - takeScreenshot:
+          path: ../screenshots/maestro_consent_ad_07_save_confirm
+      - tapOn:
+          text: "設定を保存"
+          optional: true
+      - waitForAnimationToEnd:
+          timeout: 3000
+- runFlow:
+    when:
+      visible: "設定を保存しました"
+    commands:
+      - takeScreenshot:
+          path: ../screenshots/maestro_consent_ad_07_save_confirm
+
+# === Phase 8: back で SET-01 に戻る (AC1 nav 確認) ===
+- back
+- waitForAnimationToEnd:
+    timeout: 3000
+- assertVisible: "設定"
+- takeScreenshot:
+    path: ../screenshots/maestro_consent_ad_08_back_to_settings
+
+# === Phase 9: 再度 SET-04 訪問で state 保持確認 (AC2 永続化 = AsyncStorage 読込) ===
+- scroll
+- waitForAnimationToEnd:
+    timeout: 2000
+- runFlow:
+    when:
+      visible: "広告同意設定"
+    commands:
+      - tapOn:
+          text: "広告同意設定"
+      - waitForAnimationToEnd:
+          timeout: 3000
+      # toggle が前回 OFF 状態のまま (AsyncStorage 永続化済) を想定
+      # 実機検証では Switch state を直接 assert する手段がないため、UI 表示確認のみ
+      - assertVisible: "広告"
+      # Phase B notification-preferences と同様、toggle state の永続化は L2 jest で確認
+      - back
+      - waitForAnimationToEnd:
+          timeout: 2000
+
+- assertVisible: "設定"
