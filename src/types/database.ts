@@ -27,18 +27,21 @@ export interface Database {
         Row: {
           id: string;
           name: string | null;
+          is_shared: boolean;
           created_at: string;
           updated_at: string;
         };
         Insert: {
           id?: string;
           name?: string | null;
+          is_shared?: boolean;
           created_at?: string;
           updated_at?: string;
         };
         Update: {
           id?: string;
           name?: string | null;
+          is_shared?: boolean;
           created_at?: string;
           updated_at?: string;
         };
@@ -364,7 +367,29 @@ export interface Database {
       };
     };
     Views: Record<string, never>;
-    Functions: Record<string, never>;
+    Functions: {
+      create_invitation: {
+        Args: { p_household_id: string; p_ttl_hours?: number };
+        Returns: {
+          id: string;
+          household_id: string;
+          code_short: string;
+          code_long: string;
+          expires_at: string;
+          created_by: string;
+          created_at: string;
+        }[];
+      };
+      accept_invitation: {
+        Args: { p_code_short: string };
+        Returns: {
+          household_id: string;
+          household_name: string | null;
+          is_shared: boolean;
+          member_id: string;
+        }[];
+      };
+    };
     Enums: Record<string, never>;
   };
 }

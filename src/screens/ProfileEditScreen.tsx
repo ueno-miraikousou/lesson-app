@@ -342,6 +342,19 @@ export function ProfileEditScreen() {
             </Text>
           </View>
         </View>
+
+        <Pressable
+          className="mb-4 rounded-card border border-border bg-surface p-4 active:bg-primary-light"
+          onPress={() => router.push('/(main)/share')}
+          accessibilityRole="button"
+          accessibilityLabel="家族共有 設定画面へ移動"
+          testID="profile-edit-share-link"
+        >
+          <Text className="text-h3 text-text-primary">家族共有</Text>
+          <Text className="mt-1 text-caption text-text-secondary">
+            招待コードを発行して家族を世帯に追加します
+          </Text>
+        </Pressable>
       </ScrollView>
 
       <View className="border-t border-border bg-surface px-4 py-3">

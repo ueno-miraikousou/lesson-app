@@ -69,8 +69,8 @@ function AuthGate() {
         }
         break;
       case 'main':
-        // onboarding を経由してメインへ向かう途中の状態を許容
-        if (!inMainGroup && !inOnboardingGroup) router.replace('/(main)/calendar');
+        // onboarding を経由してメインへ向かう途中、および share/* (招待コード入力等) も滞在許可
+        if (!inMainGroup && !inOnboardingGroup && !inShareGroup) router.replace('/(main)/calendar');
         break;
     }
   }, [routeKind, isHydrating, topSegment, router]);
