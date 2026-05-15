@@ -1,0 +1,161 @@
+appId: com.miraikousou.lessonapp
+name: N-02 当日出発 30 分前通知 ON/OFF + 分前プリセット選択
+---
+# N-02 予定の当日出発 30 分前通知 (デフォルト 30 分前) の NOTIF-01 接続検証
+# 作成: qa-2, 2026-05-16
+# 対象 Sprint: Phase D Sprint 3 (D3-T03 + D3-T09)
+#
+# 前提:
+#   - AUTH_BYPASS=true + main 領域到達済 (notification_settings.yaml 同様)
+#   - もしくは Settings 経由 /(main)/notifications に到達
+#   - ME-N D3-T03 (N-02 当日 30 分前通知 + 同モジュール統合) 完了済前提
+#     ※ 未実装でも UI 部分の遷移確認は可能 (scheduler.ts 呼出ログのみ別途検証)
+#   - Phase B 完遂物: notification_preferences.reminder_same_day_enabled / reminder_same_day_minutes が稼働
+#   - 分前プリセット: 15 / 30 / 45 / 60 / 90 / 120 (NotificationsScreen 実装、accessibilityRole="radio")
+#
+# 注意 (学習事項継承):
+#   - #11/#12 (Maestro inputText 不可): プリセットは radio button、tap 選択のみ (任意分カスタム入力は不可)
+#   - #14M (emulator screencap 0.3-0.5 秒ラグ): takeScreenshot 前後で waitForAnimationToEnd 必須
+#   - ADR-008 §2.2 trigger event matrix: 「通知設定変更 → グローバル再予約」、頻度低
+#   - skip_when_all_items_checked=true 時 = 全 ✓ 済 → cancel、未 ✓ あり → schedule、N-04 連動 (本 YAML 範囲外)
+#   - N-02 配信遅延要件 < 1 分 (通知設計-暫定意見 §3、L5 実機計測)
+#   - testID 未実装 (現実装は accessibilityLabel + 表示文字列ベース)
+#
+# 撮影目標:
+#   01_initial.png          = 通知設定画面到達直後
+#   02_timing_section.png   = §通知のタイミング 「当日に通知」表示
+#   03_same_day_on.png      = 当日通知 ON + 30 分前 表示
+#   04_preset_open.png      = 「通知時間」tap → プリセット 6 個 (15/30/45/60/90/120) 表示
+#   05_preset_60_selected.png = 「60分前」選択 → 反映状態
+#   06_preset_30_restore.png  = デフォルト「30分前」に戻す (副作用回避)
+#
+# 検証項目 (N-02 AC1-4):
+#   - AC1: 出発 30 分前通知スケジュール = NOTIF-01 トグル ON + 30 分前表示
+#   - AC2: 通知メッセージ「30 分後 17:00 すずちゃんスイミング (場所: ABC スイミングスクール)」 = scheduler 内部 (L1 jest)
+#   - AC3: 持ち物統合 = N-03 / notif-items-combined.yaml に分離
+#   - AC4: skip_when_all_items_checked=true 時 = 別 toggle (本画面「完了済みは通知しない」)、本 YAML §6 でも確認
+#
+# 範囲外 (L1/L2/L3/L5 へ移譲):
+#   - 実配信 timing (出発時刻 - 30 分 ± 1 分以内) → L5 実機 emulator demo
+#   - 場所名通知本文への含め方 (場所セキュリティ判断 = WBS §N-02 セキュリティ) → L2 jest payload-builder.test
+#   - カスタム分入力 (5 分単位、NOTIF-01 設計 §4.3) → 現実装は radio のみ、N-05 で対応
+#   - cross-tenant → SEC-2 (SEC-1 内包)
+
+- launchApp:
+    clearState: false
+    stopApp: true
+
+- waitForAnimationToEnd:
+    timeout: 5000
+
+# 通知設定画面到達
+- assertVisible: "通知設定"
+- takeScreenshot:
+    path: ../screenshots/maestro_notif_departure_01_initial
+
+# §通知のタイミング セクション (前日通知の下にある「当日に通知」が対象)
+- scroll
+- waitForAnimationToEnd:
+    timeout: 2000
+- assertVisible: "通知のタイミング"
+- assertVisible: "当日に通知"
+- takeScreenshot:
+    path: ../screenshots/maestro_notif_departure_02_timing_section
+
+# AC1: 当日通知 ON 状態 + 30 分前 表示
+# 説明文「当日の 30分前 に通知」+ 詳細行「通知時間」「30分前」
+- runFlow:
+    when:
+      visible: "通知時間"
+    commands:
+      - assertVisible: "通知時間"
+      # デフォルト 30分前
+      - assertVisible:
+          text: ".*30分前.*"
+      - takeScreenshot:
+          path: ../screenshots/maestro_notif_departure_03_same_day_on
+
+# AC1 + N-05 連動: 「通知時間」tap → プリセット 6 個展開
+- runFlow:
+    when:
+      visible: "通知時間"
+    commands:
+      - tapOn:
+          text: "通知時間"
+          optional: true
+      - waitForAnimationToEnd:
+          timeout: 2000
+      # プリセット 6 個 (15/30/45/60/90/120) が同時表示
+      - assertVisible: "15分前"
+      - assertVisible: "30分前"
+      - assertVisible: "45分前"
+      - assertVisible: "60分前"
+      - assertVisible: "90分前"
+      - assertVisible: "120分前"
+      - takeScreenshot:
+          path: ../screenshots/maestro_notif_departure_04_preset_open
+
+      # AC1 (追加): 「60分前」選択 → 楽観的更新 → 反映確認
+      - tapOn:
+          text: "60分前"
+          optional: true
+      - waitForAnimationToEnd:
+          timeout: 2000
+      # 反映後、プリセット行は折りたたまれる (setShowSameDayMinutesPicker(false))
+      # 「通知時間」「60分前」が説明行に反映
+      - assertVisible: "通知時間"
+      - takeScreenshot:
+          path: ../screenshots/maestro_notif_departure_05_preset_60_selected
+
+      # 副作用回避: デフォルト 30分前 に戻す
+      - tapOn:
+          text: "通知時間"
+          optional: true
+      - waitForAnimationToEnd:
+          timeout: 2000
+      - tapOn:
+          text: "30分前"
+          optional: true
+      - waitForAnimationToEnd:
+          timeout: 2000
+      - takeScreenshot:
+          path: ../screenshots/maestro_notif_departure_06_preset_30_restore
+
+# AC4 連動: 「完了済みは通知しない」(skip_when_all_items_checked) も同画面で確認
+# §通知の内容 セクション
+- scroll
+- waitForAnimationToEnd:
+    timeout: 2000
+- runFlow:
+    when:
+      visible: "完了済みは通知しない"
+    commands:
+      - assertVisible: "完了済みは通知しない"
+      - assertVisible: "チェック済みアイテムのみの場合、通知をスキップ"
+
+# AC1 OFF サイド: 「当日に通知」OFF 切替 → 通知時間表示消える
+- scroll
+- waitForAnimationToEnd:
+    timeout: 2000
+- tapOn:
+    text: "当日に通知"
+    optional: true
+- waitForAnimationToEnd:
+    timeout: 2000
+
+- runFlow:
+    when:
+      notVisible: "通知時間"
+    commands:
+      - assertVisible: "当日に通知"
+
+# 再 ON 復元 (副作用回避)
+- tapOn:
+    text: "当日に通知"
+    optional: true
+- waitForAnimationToEnd:
+    timeout: 2000
+
+# 副次検証 (range 外 メモ):
+#   - N-04 マスタートグル OFF 時の動作: 「通知を受け取る」OFF → 全 reminder 同時 OFF (NotificationsScreen 192-208 行)
+#   - scheduler.ts cancelAllScheduledNotificationsAsync → L1 jest

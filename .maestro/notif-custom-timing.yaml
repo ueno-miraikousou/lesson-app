@@ -1,0 +1,162 @@
+appId: com.miraikousou.lessonapp
+name: N-05 通知タイミングカスタマイズ (前日時刻 + 当日分前)
+---
+# N-05 通知タイミングカスタマイズ (P1) の NOTIF-01 接続検証
+# 作成: qa-2, 2026-05-16
+# 対象 Sprint: Phase D Sprint 3 (D3-T06 + D3-T09)
+#
+# 前提:
+#   - AUTH_BYPASS=true + main 領域到達済 + 通知設定画面到達
+#   - ME-N D3-T06 (N-05 タイミングカスタマイズ 折りたたみ式) 完了済前提
+#     ※ 現実装 NotificationsScreen は §通知のタイミング 内に前日時刻ピッカー + 当日分前プリセットを既配置
+#     ※ designer NOTIF-01 v0.3 §1.1 では N-05 を「カスタムタイミング アコーディオン」セクションとして明示
+#     ※ ADR-008 §1.1 では N-05 を P1 = Phase E 後送り検討と記載 → Phase D 含む場合のみ実施
+#   - Phase B 完遂物: notification_preferences.reminder_day_before_time + reminder_same_day_minutes が稼働
+#
+# 注意 (学習事項継承):
+#   - #11/#12 (Maestro inputText 不可): 時刻ピッカーは OS TimePicker (DateTimePicker)、分前は radio button → 値変更 / 選択は可
+#   - 5 分単位カスタム入力 (NOTIF-01 設計 §4.3) は現実装範囲外 (radio プリセット 15/30/45/60/90/120 のみ)
+#   - #14M (emulator screencap 0.3-0.5 秒ラグ): takeScreenshot 前後で waitForAnimationToEnd 必須
+#   - ADR-008 §2.2 trigger event matrix: 「notification_preferences 9 フィールド変更」→ グローバル再予約 (頻度低)
+#   - testID 未実装 (現実装は accessibilityLabel + 表示文字列ベース)
+#
+# 撮影目標:
+#   01_initial.png             = 通知設定画面到達直後
+#   02_timing_section.png      = §通知のタイミング セクション (前日 + 当日 両方)
+#   03_day_before_picker.png   = 前日「通知時刻」tap → DateTimePicker 開く
+#   04_same_day_preset_60.png  = 当日「60分前」選択 (デフォルト 30分前 → 60分前)
+#   05_same_day_preset_120.png = 当日「120分前」選択 (大幅変更)
+#   06_default_restore.png     = デフォルト復元 (副作用回避): 前日 21:00 + 当日 30分前
+#
+# 検証項目 (N-05 AC1-4):
+#   - AC1: 前日デフォルト 21:00 → 任意時刻変更可能 = DateTimePicker 表示確認 (値変更は OS 制約)
+#   - AC2: 当日デフォルト 30 分前 → プリセット 6 個 + radio 選択 = 60 / 120 切替確認
+#   - AC3: 変更後 N-01 / N-02 trigger 時刻反映 = scheduler 再予約 (L1 jest scheduler.test)
+#   - AC4: 設定値の notification_preferences 永続化 = 楽観的更新 + DB upsert (L2 jest NotificationsScreen.test)
+#
+# 範囲外 (L1/L2/L3/L5 へ移譲):
+#   - OS TimePicker の値変更操作 (Maestro 制御不可) → L5 手動 + OS picker 値変更後の DB 反映確認
+#   - 5 分単位カスタム入力 → designer §4.3 仕様、現実装範囲外 (Phase E 後送り or 設計変更)
+#   - 変更後の scheduleNotificationAsync 呼出回数 → L1 jest scheduler.test
+#   - notification_preferences DB 書込の楽観的更新 + rollback → L2 jest NotificationsScreen.test
+#   - cross-tenant 漏洩 → SEC-1 RLS-NOTI-* (Phase B 既存検証済)
+
+- launchApp:
+    clearState: false
+    stopApp: true
+
+- waitForAnimationToEnd:
+    timeout: 5000
+
+# 通知設定画面到達
+- assertVisible: "通知設定"
+- takeScreenshot:
+    path: ../screenshots/maestro_notif_custom_timing_01_initial
+
+# §通知のタイミング セクション
+- scroll
+- waitForAnimationToEnd:
+    timeout: 2000
+- assertVisible: "通知のタイミング"
+- assertVisible: "前日に通知"
+- assertVisible: "当日に通知"
+- takeScreenshot:
+    path: ../screenshots/maestro_notif_custom_timing_02_timing_section
+
+# AC1: 前日通知時刻ピッカー動作
+# 「通知時刻」+ 「21:00」表示 (デフォルト)
+- runFlow:
+    when:
+      visible: "通知時刻"
+    commands:
+      - assertVisible: "通知時刻"
+      - assertVisible:
+          text: ".*21:00.*"
+
+      # tap → DateTimePicker 開閉確認
+      - tapOn:
+          text: "通知時刻"
+          optional: true
+      - waitForAnimationToEnd:
+          timeout: 2000
+      - takeScreenshot:
+          path: ../screenshots/maestro_notif_custom_timing_03_day_before_picker
+
+      # OS picker を閉じる (Android = back / iOS = spinner 外 tap、optional)
+      - back
+      - waitForAnimationToEnd:
+          timeout: 1500
+
+# AC2: 当日通知分前プリセット
+# 「通知時間」+ 「30分前」(デフォルト) 表示
+- runFlow:
+    when:
+      visible: "通知時間"
+    commands:
+      - assertVisible: "通知時間"
+      - assertVisible:
+          text: ".*30分前.*"
+
+      # tap → プリセット 6 個展開
+      - tapOn:
+          text: "通知時間"
+          optional: true
+      - waitForAnimationToEnd:
+          timeout: 2000
+      - assertVisible: "15分前"
+      - assertVisible: "30分前"
+      - assertVisible: "45分前"
+      - assertVisible: "60分前"
+      - assertVisible: "90分前"
+      - assertVisible: "120分前"
+
+      # AC2: 「60分前」選択 (デフォルト 30 → 60)
+      - tapOn:
+          text: "60分前"
+          optional: true
+      - waitForAnimationToEnd:
+          timeout: 2000
+      - assertVisible: "通知時間"
+      - takeScreenshot:
+          path: ../screenshots/maestro_notif_custom_timing_04_same_day_preset_60
+
+      # AC2 (継続): 「120分前」へ大幅変更
+      - tapOn:
+          text: "通知時間"
+          optional: true
+      - waitForAnimationToEnd:
+          timeout: 2000
+      - tapOn:
+          text: "120分前"
+          optional: true
+      - waitForAnimationToEnd:
+          timeout: 2000
+      - takeScreenshot:
+          path: ../screenshots/maestro_notif_custom_timing_05_same_day_preset_120
+
+      # 副作用回避: デフォルト 30分前 に戻す
+      - tapOn:
+          text: "通知時間"
+          optional: true
+      - waitForAnimationToEnd:
+          timeout: 2000
+      - tapOn:
+          text: "30分前"
+          optional: true
+      - waitForAnimationToEnd:
+          timeout: 2000
+
+# 最終 state スクリーンショット (デフォルト復元確認)
+- scroll
+- waitForAnimationToEnd:
+    timeout: 2000
+- assertVisible: "通知のタイミング"
+- takeScreenshot:
+    path: ../screenshots/maestro_notif_custom_timing_06_default_restore
+
+# 副次検証 (range 外 メモ):
+#   - 5 分単位カスタム入力 (NOTIF-01 設計 §4.3) は現実装範囲外、Phase E 後送り判定 (社長確認)
+#   - 変更後の scheduleNotificationAsync 呼出: cancelAllScheduledNotificationsAsync → 新時刻で再予約 (L1 jest)
+#   - rescheduleAllNotifications 性能 (50 予定 × 2 = 100 OS API call、ADR-008 R-D8-7) → L5 実機計測
+#   - N-05 を P1 として含むか社長判断中 (ADR-008 §6.4 C5、Phase D MVP 含否)
+#     → 含まれない場合は本 YAML を defer 化 or 削除 (v0.2 で判定)

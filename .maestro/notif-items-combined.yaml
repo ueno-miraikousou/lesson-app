@@ -1,0 +1,122 @@
+appId: com.miraikousou.lessonapp
+name: N-03 持ち物統合通知 ON/OFF + skip_when_all_items_checked
+---
+# N-03 持ち物統合通知 (N-01 / N-02 通知文への「持ち物：水着 / ゴーグル / 他1点」統合) 検証
+# 作成: qa-2, 2026-05-16
+# 対象 Sprint: Phase D Sprint 3 (D3-T04 + D3-T09)
+#
+# 前提:
+#   - AUTH_BYPASS=true + main 領域到達済 + 通知設定画面到達
+#   - ME-N D3-T04 (N-03 持ち物統合通知メッセージ生成 = buildNotificationMessage) 完了済前提
+#   - Phase B 完遂物: notification_preferences.include_items_in_notification / skip_when_all_items_checked が稼働
+#   - Phase C I-01/I-02 (持ち物 CRUD + 当日チェック) 完遂で items / schedule_item_checks テーブル稼働
+#
+# 注意 (学習事項継承):
+#   - #11/#12 (Maestro inputText 不可): 持ち物リスト追加は cal-item-crud.yaml 系で別途検証
+#   - 通知本文の組成内容 (60 文字以内 + 持ち物 3 件まで + 残り「他N点」省略、ADR-008 §2.3) = L1 jest payload-builder.test
+#   - 「完了済みは通知しない」(skip_when_all_items_checked) は ADR-008 §2.2 trigger event matrix:
+#     - schedule_item_checks UPSERT 時に当日通知を再判定 (全 ✓ 済 → cancel、未 ✓ あり → schedule)
+#   - testID 未実装 (現実装は accessibilityLabel + 表示文字列ベース)
+#
+# 撮影目標:
+#   01_initial.png            = 通知設定画面到達直後
+#   02_content_section.png    = §通知の内容 セクション (持ち物を含める + 完了済みは通知しない)
+#   03_include_items_on.png   = 「持ち物を含める」ON 状態 (デフォルト)
+#   04_include_items_off.png  = 「持ち物を含める」OFF 切替後
+#   05_skip_checked_on.png    = 「完了済みは通知しない」ON 切替後
+#   06_skip_checked_off.png   = 「完了済みは通知しない」OFF 復元 (副作用回避)
+#
+# 検証項目 (N-03 AC1-4):
+#   - AC1: N-01 / N-02 通知に持ち物リストを含める = NOTIF-01「持ち物を含める」ON 確認
+#   - AC2: 文字数制約 (3 件まで明示 + 残り「他N点」省略) = scheduler 内部、本 YAML 範囲外 (L1 jest)
+#   - AC3: 持ち物未登録時 = 基本メッセージのみ → 持ち物 0 件世帯で実機検証 (L5)
+#   - AC4: 既チェック済持ち物の表記 (省略 or 済表記) = scheduler 内部、本 YAML 範囲外 (L1 jest)
+#   - AC4 派生: skip_when_all_items_checked = 全 ✓ 済時 通知 skip = 別 toggle 確認 (本 YAML §3.2 末)
+#
+# 範囲外 (L1/L2/L3/L5 へ移譲):
+#   - 通知本文組成の文字数制約 (60 文字 + 3 件 + 他N点) → L1 jest payload-builder.test
+#   - 持ち物登録経路 (I-01 / I-02 wizard / CAL-09) → cal-item-crud.yaml + wizard 系 YAML
+#   - 全 ✓ 済時の cancel 動作 → L1 jest scheduler.test (schedule_item_checks UPSERT trigger event)
+#   - cross-tenant items 漏洩 → SEC-1 RLS-ITEM-* (Phase B 既存検証済)
+#   - schedule_item_checks の household_id 列なし境界 → SEC-2 RT-05
+
+- launchApp:
+    clearState: false
+    stopApp: true
+
+- waitForAnimationToEnd:
+    timeout: 5000
+
+# 通知設定画面到達
+- assertVisible: "通知設定"
+- takeScreenshot:
+    path: ../screenshots/maestro_notif_items_combined_01_initial
+
+# §通知の内容 セクション (前日 + 当日タイミングの下に位置)
+- scroll
+- waitForAnimationToEnd:
+    timeout: 2000
+- scroll
+- waitForAnimationToEnd:
+    timeout: 2000
+- assertVisible: "通知の内容"
+- assertVisible: "持ち物を含める"
+- assertVisible: "通知に当日の持ち物リストを含めます"
+- assertVisible: "完了済みは通知しない"
+- assertVisible: "チェック済みアイテムのみの場合、通知をスキップ"
+- takeScreenshot:
+    path: ../screenshots/maestro_notif_items_combined_02_content_section
+
+# AC1: 「持ち物を含める」ON 状態確認 (デフォルト ON)
+# accessibilityLabel="持ち物を含める" の Switch
+- assertVisible: "持ち物を含める"
+- takeScreenshot:
+    path: ../screenshots/maestro_notif_items_combined_03_include_items_on
+
+# AC1 OFF サイド: 「持ち物を含める」OFF 切替 → 楽観的更新 → DB 書込 → state 反映
+# OFF 後の挙動 = scheduler が次回再予約時に持ち物セクション省略 (L1 jest payload-builder.test)
+- tapOn:
+    text: "持ち物を含める"
+    optional: true
+- waitForAnimationToEnd:
+    timeout: 2000
+- assertVisible: "持ち物を含める"
+- takeScreenshot:
+    path: ../screenshots/maestro_notif_items_combined_04_include_items_off
+
+# 再 ON 復元 (副作用回避)
+- tapOn:
+    text: "持ち物を含める"
+    optional: true
+- waitForAnimationToEnd:
+    timeout: 2000
+
+# AC4 派生: 「完了済みは通知しない」(skip_when_all_items_checked) toggle 確認
+# デフォルト OFF 想定 (notification_preferences DEFAULTS)
+- assertVisible: "完了済みは通知しない"
+
+# OFF → ON 切替 (副作用は scheduler 再予約)
+- tapOn:
+    text: "完了済みは通知しない"
+    optional: true
+- waitForAnimationToEnd:
+    timeout: 2000
+- assertVisible: "完了済みは通知しない"
+- takeScreenshot:
+    path: ../screenshots/maestro_notif_items_combined_05_skip_checked_on
+
+# ON → OFF 復元 (副作用回避)
+- tapOn:
+    text: "完了済みは通知しない"
+    optional: true
+- waitForAnimationToEnd:
+    timeout: 2000
+- takeScreenshot:
+    path: ../screenshots/maestro_notif_items_combined_06_skip_checked_off
+
+# 副次検証 (range 外 メモ):
+#   - 通知本文の実例: 「明日 17:00 すずちゃんのスイミング 持ち物：水着 / ゴーグル / 他1点」
+#     → 表示形式は ADR-008 §2.3 + designer NOTIF-01 §3.1 「明日17:00 スイミング 持ち物：水着 / 他2点」 (3 件 + 他N点)
+#     → 60 文字以内、L1 jest payload-builder で網羅
+#   - lock_screen_privacy_mode=true 時の挙動: title「予定があります」+ body なし (ADR-008 §2.3)
+#     → §プライバシー の別 toggle、別 YAML 化なし (本 YAML 範囲外)

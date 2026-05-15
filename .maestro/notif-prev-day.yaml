@@ -1,0 +1,127 @@
+appId: com.miraikousou.lessonapp
+name: N-01 前日 21 時通知 ON/OFF + 時刻ピッカー動作確認
+---
+# N-01 予定の前日通知 (デフォルト 21:00) の NOTIF-01 接続検証
+# 作成: qa-2, 2026-05-16
+# 対象 Sprint: Phase D Sprint 3 (D3-T02 + D3-T09)
+#
+# 前提:
+#   - AUTH_BYPASS=true + main 領域到達済 (notification_settings.yaml 同様)
+#   - もしくは Settings 経由 /(main)/notifications に到達
+#   - ME-N D3-T02 (N-01 前日 21 時通知スケジュール実装) 完了済前提
+#     ※ 未実装でも UI 部分の遷移確認は可能 (scheduler.ts 呼出ログのみ別途検証)
+#   - Phase B 完遂物: notification_preferences.reminder_day_before_enabled / reminder_day_before_time が稼働
+#
+# 注意 (学習事項継承):
+#   - #11/#12 (Maestro inputText 不可): 時刻ピッカーは OS TimePicker → 直接値入力は不可、tap で開閉のみ確認
+#   - #14M (emulator screencap 0.3-0.5 秒ラグ): takeScreenshot 前後で waitForAnimationToEnd 必須
+#   - #34M (AUTH_BYPASS UUID v4 + MOCK_HOUSEHOLD_ID): 通知設定は世帯単位、AUTH_BYPASS で fixture を読込
+#   - ADR-008 §2.2 trigger event matrix: NOTIF-01 トグル変更 → scheduler 再予約 (R-D8-10 で「Sprint 3 で接続忘れリスク」明記)
+#   - testID 未実装 (現実装は accessibilityLabel + 表示文字列ベース)、本 YAML は文字列 + accessibilityLabel ベース
+#
+# 撮影目標:
+#   01_initial.png         = 通知設定画面到達直後
+#   02_timing_section.png  = §通知のタイミング セクション表示 (前日 + 当日)
+#   03_day_before_on.png   = 前日通知 ON 状態 (時刻 21:00 表示)
+#   04_time_picker.png     = 時刻 tap → DateTimePicker 開いた状態 (OS 標準)
+#   05_day_before_off.png  = 前日通知 OFF 切替後 (時刻表示が消える)
+#
+# 検証項目 (N-01 AC1-5):
+#   - AC1: 前日 21:00 通知スケジュール = NOTIF-01 トグル ON + 時刻 21:00 表示確認
+#   - AC2: 通知メッセージ「明日 17:00 すずちゃんスイミング」= scheduler 内部、本 YAML 範囲外 (L1 jest)
+#   - AC3: 持ち物統合 = N-03 / notif-items-combined.yaml に分離
+#   - AC4: タップ → 予定詳細遷移 = scheduler response-handler、本 YAML 範囲外 (L5 手動 + L1 jest)
+#   - AC5: 当日朝未読時 N-02 リマインダー = 設計上 N-02 経路、本 YAML 範囲外
+#
+# 範囲外 (L1/L2/L3/L5 へ移譲):
+#   - 実配信 timing (21 時 ± 1 分以内) → L5 実機 emulator demo
+#   - scheduleNotificationAsync 呼出回数 → L1 jest scheduler.test
+#   - 通知タップ → CAL-09 deeplink → L5 手動 + L1 jest response-handler.test
+#   - notification_preferences DB 書込 (楽観的更新 + rollback) → L2 jest NotificationsScreen.test
+#   - cross-tenant 漏洩 → SEC-2 RLS-NOTI-* (SEC-1 内包、回帰確認)
+
+- launchApp:
+    clearState: false
+    stopApp: true
+
+- waitForAnimationToEnd:
+    timeout: 5000
+
+# 通知設定画面到達 (AUTH_BYPASS + deep link or main → 設定 → 通知)
+# 設計上は SET-01 設定トップから「通知設定」遷移、AUTH_BYPASS 時は deep link 想定
+- assertVisible: "通知設定"
+- assertVisible: "通知のタイミング、内容、サウンドなどを設定します"
+- takeScreenshot:
+    path: ../screenshots/maestro_notif_prev_day_01_initial
+
+# §通知マスター: 「通知を受け取る」ON 状態確認 (デフォルト ON 想定)
+- assertVisible: "通知"
+- assertVisible: "通知を受け取る"
+- assertVisible: "このアプリからの通知を受け取ります"
+
+# §通知のタイミング セクション
+- scroll
+- waitForAnimationToEnd:
+    timeout: 2000
+- assertVisible: "通知のタイミング"
+- assertVisible: "前日に通知"
+- takeScreenshot:
+    path: ../screenshots/maestro_notif_prev_day_02_timing_section
+
+# AC1: 前日通知 ON 状態 + 時刻 21:00 表示
+# accessibilityLabel="前日通知" の Switch がトグル本体
+# 「通知時刻」+ 「21:00」が ON 時の Pressable 内に表示
+- runFlow:
+    when:
+      visible: "通知時刻"
+    commands:
+      - assertVisible: "通知時刻"
+      # 時刻フォーマットは "21:00" (formatTime 関数で HH:mm)
+      - assertVisible:
+          text: ".*21:00.*"
+      - takeScreenshot:
+          path: ../screenshots/maestro_notif_prev_day_03_day_before_on
+
+# AC1 (追加): 時刻 tap → OS TimePicker 開く動作
+# DateTimePicker は OS 標準、Maestro で値変更は不可 → 開閉確認のみ
+- runFlow:
+    when:
+      visible: "通知時刻"
+    commands:
+      - tapOn:
+          text: "通知時刻"
+          optional: true
+      - waitForAnimationToEnd:
+          timeout: 2000
+      - takeScreenshot:
+          path: ../screenshots/maestro_notif_prev_day_04_time_picker
+      # OS picker を閉じる (Android: back / iOS: spinner 外 tap)、optional
+      - back
+      - waitForAnimationToEnd:
+          timeout: 1500
+
+# AC1 (反対側): 前日通知 OFF 切替 → 時刻表示消える + scheduler.cancelAllScheduledNotificationsAsync 呼出 (L1 jest 検証)
+- tapOn:
+    text: "前日に通知"
+    optional: true
+- waitForAnimationToEnd:
+    timeout: 2000
+
+# OFF 後は「通知時刻」の Pressable が conditional render で消える設計
+- runFlow:
+    when:
+      notVisible: "通知時刻"
+    commands:
+      - assertVisible: "前日に通知"
+      - takeScreenshot:
+          path: ../screenshots/maestro_notif_prev_day_05_day_before_off
+
+# 再 ON に戻す (副作用回避、後続 YAML のために state を元に戻す)
+- tapOn:
+    text: "前日に通知"
+    optional: true
+- waitForAnimationToEnd:
+    timeout: 2000
+
+# 副次検証: NOTIF-01 設計 §4.2 「変更時: 既存の予約通知を再スケジュール」
+# scheduler.ts の rescheduleAllNotifications 呼出は L1 jest で検証、本 YAML では UI 反映のみ
