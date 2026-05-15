@@ -154,6 +154,93 @@ export async function sendPasswordResetEmail(
   return { error: normalizeAuthError(error) };
 }
 
+/**
+ * Phase D D4-T01 A-03: パスワード再設定 (AUTH-06)。
+ * メールリンクから戻った後、Supabase Auth がセッションを発行している前提で
+ * `updateUser({ password })` を呼ぶ。
+ */
+export async function updatePassword(
+  newPassword: string,
+): Promise<{ error: NormalizedAuthError | null }> {
+  const { error } = await supabase.auth.updateUser({ password: newPassword });
+  return { error: normalizeAuthError(error) };
+}
+
+/**
+ * Phase D D4-T02 A-05: アカウント退会。
+ *
+ * 設計:
+ *   - クライアントから安全に呼べる経路は限られる (Supabase Auth admin API は service_role 必須)。
+ *   - MVP: 自世帯の所有データ (members / lessons / schedules / items / chat 等) は
+ *     ON DELETE CASCADE 設定 (architect-5 0006 migration 設計、§RD-5) により
+ *     household 行削除で連鎖削除される。
+ *   - household_members から自分の行を削除して所属関係を切る。
+ *   - その後 signOut() でクライアントセッションを破棄。
+ *   - Auth user 行そのものの削除は Edge Function `delete-user` (service_role 経由、Sprint 5 起案候補)
+ *     で非同期に処理する想定。MVP では「セッション破棄 + 所属解除」までを同期的に保証する。
+ *
+ * AUTH_BYPASS 時はサーバ呼出を全てスキップし、signOut も no-op で抜ける。
+ */
+export interface DeleteAccountResult {
+  /** household 削除を実行したか (世帯主のとき true、所属解除のみのとき false) */
+  householdDeleted: boolean;
+  error: NormalizedAuthError | null;
+}
+
+export async function deleteAccount(
+  authUserId: string,
+  householdId: string | null,
+): Promise<DeleteAccountResult> {
+  if (!authUserId) {
+    return {
+      householdDeleted: false,
+      error: {
+        code: 'unknown',
+        message: 'missing auth user id',
+        displayMessage: 'セッションが取得できません。再度ログインしてください',
+      },
+    };
+  }
+
+  // 1) household_members の自分の行を取得 (世帯主かどうか判定)
+  let householdDeleted = false;
+  if (householdId) {
+    const { data: membership, error: selErr } = await supabase
+      .from('household_members')
+      .select('role_in_household')
+      .eq('household_id', householdId)
+      .eq('auth_user_id', authUserId)
+      .maybeSingle();
+    if (selErr) {
+      return { householdDeleted: false, error: normalizeAuthError(selErr) };
+    }
+    // 世帯主 (owner) なら household を CASCADE 削除、それ以外は所属解除のみ
+    if (membership?.role_in_household === 'owner') {
+      const { error: delHouseholdErr } = await supabase
+        .from('households')
+        .delete()
+        .eq('id', householdId);
+      if (delHouseholdErr) {
+        return { householdDeleted: false, error: normalizeAuthError(delHouseholdErr) };
+      }
+      householdDeleted = true;
+    } else {
+      const { error: delMembershipErr } = await supabase
+        .from('household_members')
+        .delete()
+        .eq('household_id', householdId)
+        .eq('auth_user_id', authUserId);
+      if (delMembershipErr) {
+        return { householdDeleted: false, error: normalizeAuthError(delMembershipErr) };
+      }
+    }
+  }
+
+  // 2) クライアントセッション破棄 (Auth user 行の削除は Edge Function で非同期処理)
+  const { error: signOutErr } = await signOut();
+  return { householdDeleted, error: signOutErr };
+}
+
 export async function resendVerificationEmail(
   email: string,
 ): Promise<{ error: NormalizedAuthError | null }> {

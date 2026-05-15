@@ -41,7 +41,7 @@ export default function ResetPasswordScreen() {
   if (submitted) {
     return (
       <ScreenContainer>
-        <View className="mt-10">
+        <View className="mt-10" testID="auth-reset-request-success">
           <Text className="text-h1 text-text-primary">メールを送信しました</Text>
           <Text className="mt-3 text-body text-text-secondary">
             ご入力のメールアドレスにパスワードリセット用のリンクを送信しました。メールが届かない場合は、迷惑メールフォルダもご確認ください。
@@ -50,6 +50,7 @@ export default function ResetPasswordScreen() {
             <PrimaryButton
               label="ログインに戻る"
               onPress={() => router.replace('/(auth)/login')}
+              testID="auth-reset-request-back-login"
             />
           </View>
         </View>
@@ -75,15 +76,22 @@ export default function ResetPasswordScreen() {
         keyboardType="email-address"
         textContentType="emailAddress"
         errorText={submitError}
+        testID="auth-reset-request-email-input"
       />
 
-      <PrimaryButton label="リセットメールを送信" onPress={handleSubmit} loading={loading} />
+      <PrimaryButton
+        label="リセットメールを送信"
+        onPress={handleSubmit}
+        loading={loading}
+        testID="auth-reset-request-submit"
+      />
 
       <View className="mt-5">
         <PrimaryButton
           label="ログインに戻る"
           variant="text"
           onPress={() => router.replace('/(auth)/login')}
+          testID="auth-reset-request-back-login-bottom"
         />
       </View>
     </ScreenContainer>
