@@ -8,6 +8,7 @@ import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
 
+import { RealtimeToastHost } from '../components/ui/RealtimeToastHost';
 import { useAuthSession } from '../hooks/use-auth-session';
 import { queryClient } from '../lib/query-client';
 import { useAuthStore } from '../stores/auth-store';
@@ -97,6 +98,9 @@ function RootContent() {
     <>
       <Stack screenOptions={{ headerShown: false }} />
       <AuthGate />
+      {/* Realtime 受信時の「他のメンバーが編集しました」Toast (Phase D Sprint 2 D2-T05)。
+          Realtime hook 本体は (main)/_layout.tsx で起動 (wizard/login 経路では起動させない)。 */}
+      <RealtimeToastHost />
     </>
   );
 }
