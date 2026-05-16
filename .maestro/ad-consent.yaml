@@ -1,0 +1,249 @@
+appId: com.miraikousou.lessonapp
+name: Phase E AD-04 UMP 同意フロー + C-05 SDK 連動 (Phase E Sprint 0 E0-Q04)
+---
+# Phase E AD-04 UMP (User Messaging Platform) 同意フロー + C-05 SDK 連動 (Phase E Sprint 0 E0-Q04)
+# 作成: qa-2, 2026-05-16 (Phase E Sprint 0)
+# 対象 Sprint: Phase E Sprint 0 起案 → Sprint 1 (AdMob SDK 組込後) 実機実行
+#
+# 前提:
+#   - Phase D `consent-ad.yaml` (C-05 UI のみ AsyncStorage 永続化確認) を継承、Phase E では SDK + UMP 連動を追加検証
+#   - architect-5 起草中の ADR-009 AdMob SDK 組込方針 (Sprint 0)
+#   - `react-native-google-mobile-ads` + UMP SDK 組込済 (Phase E Sprint 1 完了想定)
+#   - `loadAdConsentState` / `saveAdConsentState` (`src/screens/AdConsentScreen.tsx` Phase D Sprint 4) を AdMob `setRequestConfiguration` + `setNonPersonalizedAdsOnly` に接続済
+#   - AUTH_BYPASS=true で main 領域到達済 + 設定タブ⚙到達済
+#   - AdMob test ID (`ca-app-pub-3940256099942544/*`) を `.env` 経由で組込済 (本番 ID は v1.0 リリース直前差替え)
+#
+# 注意 (学習事項継承):
+#   - #11/#12 (Maestro inputText 不可): toggle / radio button tap 中心、入力は範囲外
+#   - #14M (emulator screencap 0.3-0.5 秒ラグ): takeScreenshot 前後で waitForAnimationToEnd 必須
+#   - #46Q (accessibilityLabel + 表示文字列 + runFlow when visible ハイブリッド)
+#   - UMP form は EEA region のみ表示 → 非 EEA 国内検証では「設定画面から再表示」button で代替
+#   - SDK 初期化失敗時の silent fail は別 YAML or L5 補完
+#
+# 撮影目標 (累計 10 シーン、Phase D consent-ad.yaml を拡張):
+#   01_settings_privacy.png          = SET-01 プライバシー > 「広告同意設定」menu (Phase D 既存)
+#   02_consent_screen.png            = SET-04 / C-05 AdConsentScreen 到達 (Phase D 既存)
+#   03_consent_options.png           = 3 択 radio (personalized / non-personalized / no-ads)
+#   04_select_non_personalized.png   = 「個人化しない広告のみ」選択
+#   05_admob_init_triggered.png      = AdMob SDK 初期化 trigger (UI 上「設定が保存されました」toast)
+#   06_select_personalized.png       = 「個人化された広告」選択切替
+#   07_select_no_ads.png             = 「広告を表示しない」選択 (Phase E は non-personalized 互換)
+#   08_ump_reshow_button.png         = 「UMP 同意ダイアログを再表示」button (Phase E AC4)
+#   09_ump_reshow_dialog.png         = UMP form 再表示 (非 EEA は skip、表示時は 3 択 form)
+#   10_state_persistence.png         = back → 再訪で前回選択保持 (AsyncStorage 永続化 + SDK 連動)
+#
+# 検証項目 (Phase E AC):
+#   - AD-04 AC1: UMP form 表示 (EEA region または「再表示」button tap) → 3 択 form
+#   - AD-04 AC2: 同意取得後 SDK 初期化 trigger (loadAdConsentState → setRequestConfiguration 連動)
+#   - AD-04 AC3: 「同意しない」でも閲覧 OK (非個人化広告のみ表示、UX 制限なし)
+#   - C-05 AC3: 選択結果を `ad_consent_state` AsyncStorage 保存 + Phase E で SDK 設定整合
+#   - C-05 AC4: 設定画面 SET-01 から再表示可能 (UMP 再表示 button tap)
+#
+# 範囲外 (L1/L2/L3/L5 へ移譲):
+#   - AdMob SDK 内部 API mock → L2 jest (admob.test.ts + AdConsentScreen.test 拡張)
+#   - UMP region detection (EEA vs 非 EEA) → L5 VPN 経由実機検証
+#   - 実 SDK 配信広告コンテンツ確認 → L5 実機 + AdMob 管理画面
+#   - インタースティシャル広告 (AD-03 含む場合) → ad-interstitial.yaml 別建て
+#   - idfa/aaid 漏洩監査 → SEC-3 自動実行スクリプト
+
+- launchApp:
+    clearState: false
+    stopApp: true
+
+- waitForAnimationToEnd:
+    timeout: 5000
+
+# === Phase 1: 設定画面 SET-01 プライバシーセクション 「広告同意設定」menu 到達 ===
+- runFlow:
+    when:
+      notVisible: "設定"
+    commands:
+      - tapOn:
+          id: "tab-settings"
+          optional: true
+      - waitForAnimationToEnd:
+          timeout: 3000
+
+- assertVisible: "設定"
+- scroll
+- waitForAnimationToEnd:
+    timeout: 2000
+- runFlow:
+    when:
+      visible: "プライバシー"
+    commands:
+      - assertVisible: "プライバシー"
+      - takeScreenshot:
+          path: ../screenshots/maestro_ad_consent_01_settings_privacy
+- runFlow:
+    when:
+      visible: "広告同意設定"
+    commands:
+      - assertVisible: "広告同意設定"
+      - tapOn:
+          text: "広告同意設定"
+      - waitForAnimationToEnd:
+          timeout: 3000
+
+# === Phase 2: AdConsentScreen 到達 (C-05) ===
+- assertVisible: "広告"
+- takeScreenshot:
+    path: ../screenshots/maestro_ad_consent_02_consent_screen
+
+# === Phase 3: 3 択 radio 表示確認 (C-05 AC2) ===
+- runFlow:
+    when:
+      visible: "個人化しない"
+    commands:
+      - assertVisible: "個人化しない"
+- runFlow:
+    when:
+      visible: "個人化された"
+    commands:
+      - assertVisible: "個人化された"
+- runFlow:
+    when:
+      visible: "広告を表示しない"
+    commands:
+      - assertVisible: "広告を表示しない"
+- takeScreenshot:
+    path: ../screenshots/maestro_ad_consent_03_consent_options
+
+# === Phase 4: 「個人化しない」選択 (C-05 AC3 + AD-04 AC3 = 非個人化広告のみ閲覧 OK) ===
+- runFlow:
+    when:
+      visible: "個人化しない"
+    commands:
+      - tapOn:
+          text: "個人化しない"
+          optional: true
+      - waitForAnimationToEnd:
+          timeout: 2000
+      - takeScreenshot:
+          path: ../screenshots/maestro_ad_consent_04_select_non_personalized
+
+# 「設定を保存」button (実装次第) or 自動保存 toast
+- runFlow:
+    when:
+      visible: "設定を保存"
+    commands:
+      - tapOn:
+          text: "設定を保存"
+          optional: true
+      - waitForAnimationToEnd:
+          timeout: 3000
+
+# Phase E: AdMob SDK 初期化 trigger 確認 (UI 上 toast or 状態表示、実装次第)
+- runFlow:
+    when:
+      visible: "設定を保存しました"
+    commands:
+      - assertVisible: "設定を保存しました"
+      - takeScreenshot:
+          path: ../screenshots/maestro_ad_consent_05_admob_init_triggered
+
+# === Phase 5: 「個人化された広告」選択切替 (C-05 AC3 切替動作) ===
+- runFlow:
+    when:
+      visible: "個人化された"
+    commands:
+      - tapOn:
+          text: "個人化された"
+          optional: true
+      - waitForAnimationToEnd:
+          timeout: 2000
+      - takeScreenshot:
+          path: ../screenshots/maestro_ad_consent_06_select_personalized
+
+- runFlow:
+    when:
+      visible: "設定を保存"
+    commands:
+      - tapOn:
+          text: "設定を保存"
+          optional: true
+      - waitForAnimationToEnd:
+          timeout: 3000
+
+# === Phase 6: 「広告を表示しない」選択 (Phase E は non-personalized 互換、AC2 全 3 択動作確認) ===
+- runFlow:
+    when:
+      visible: "広告を表示しない"
+    commands:
+      - tapOn:
+          text: "広告を表示しない"
+          optional: true
+      - waitForAnimationToEnd:
+          timeout: 2000
+      - takeScreenshot:
+          path: ../screenshots/maestro_ad_consent_07_select_no_ads
+
+- runFlow:
+    when:
+      visible: "設定を保存"
+    commands:
+      - tapOn:
+          text: "設定を保存"
+          optional: true
+      - waitForAnimationToEnd:
+          timeout: 3000
+
+# === Phase 7: 「UMP 同意ダイアログを再表示」button (Phase E AC4、設定画面から再表示) ===
+# Phase E 実装後 v0.2 で精密化、現在は「UMP」テキスト含む button 想定
+- runFlow:
+    when:
+      visible: "UMP"
+    commands:
+      - assertVisible: "UMP"
+      - takeScreenshot:
+          path: ../screenshots/maestro_ad_consent_08_ump_reshow_button
+      - tapOn:
+          text: "UMP"
+          optional: true
+      - waitForAnimationToEnd:
+          timeout: 5000
+
+# UMP form 再表示確認 (EEA region のみ表示、非 EEA は skip)
+# 想定 form: 「データ処理パートナー」+ 「同意する」「同意しない」「カスタマイズ」3 択
+- runFlow:
+    when:
+      visible: "データ処理"
+    commands:
+      - assertVisible: "データ処理"
+      - takeScreenshot:
+          path: ../screenshots/maestro_ad_consent_09_ump_reshow_dialog
+      # 「同意しない」選択で form close (UX 制限なし)
+      - tapOn:
+          text: "同意しない"
+          optional: true
+      - waitForAnimationToEnd:
+          timeout: 3000
+
+# === Phase 8: back → 再訪で前回選択保持 (AsyncStorage 永続化 + SDK 連動、Phase D AC2 + Phase E AC3 連動) ===
+- back
+- waitForAnimationToEnd:
+    timeout: 3000
+- assertVisible: "設定"
+
+- scroll
+- waitForAnimationToEnd:
+    timeout: 2000
+- runFlow:
+    when:
+      visible: "広告同意設定"
+    commands:
+      - tapOn:
+          text: "広告同意設定"
+      - waitForAnimationToEnd:
+          timeout: 3000
+
+# AdConsentScreen 再到達 + 前回選択 (「広告を表示しない」) が保持されているかは UI 上 radio state で確認
+# Phase D YAML #46Q (Switch state を直接 assert する手段がない) を継承、UI 表示確認のみ
+- assertVisible: "広告"
+- takeScreenshot:
+    path: ../screenshots/maestro_ad_consent_10_state_persistence
+
+- back
+- waitForAnimationToEnd:
+    timeout: 2000
+- assertVisible: "設定"

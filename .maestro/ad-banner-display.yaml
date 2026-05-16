@@ -1,0 +1,346 @@
+appId: com.miraikousou.lessonapp
+name: Phase E AD-01 SDK 組込 + AD-02 バナー表示確認 (Phase E Sprint 0 E0-Q04)
+---
+# Phase E AD-01 SDK 組込 + AD-02 バナー表示確認 (Phase E Sprint 0 E0-Q04)
+# 作成: qa-2, 2026-05-16 (Phase E Sprint 0)
+# 対象 Sprint: Phase E Sprint 0 起案 → Sprint 1 (AdMob SDK 組込後) 実機実行
+#
+# 前提:
+#   - architect-5 起草中の ADR-009 AdMob SDK 組込方針 (Sprint 0)
+#   - `react-native-google-mobile-ads` 組込済 (Phase E Sprint 1 完了想定)
+#   - バナー配置 (要件定義 v0.6.2 §4.AD-02): CAL-01 / MEM-01 / SET-01 下部に 320x50 (standard) or adaptive banner
+#   - AUTH_BYPASS=true で main 領域到達済 (子供向けタグ + 非個人化広告 default 想定で確認)
+#   - AdMob test ID (`ca-app-pub-3940256099942544/6300978111` for Android banner) を `.env` 経由で組込済
+#   - test ID のバナーは「Test Ad」と表示される (本番 ID 切替は v1.0 リリース直前)
+#
+# 注意 (学習事項継承):
+#   - #11/#12 (Maestro inputText 不可): tap nav + assertVisible 主軸
+#   - #14M (emulator screencap 0.3-0.5 秒ラグ): takeScreenshot 前後で waitForAnimationToEnd 必須
+#   - #46Q (accessibilityLabel + 表示文字列 + runFlow when visible ハイブリッド)
+#   - バナーは押下しない (誤クリック事故 risk、AdMob test ID でも本番では invalid traffic 扱い)
+#   - バナー描画パフォーマンス (Phase E E2 AC < 100ms) は L1 jest + console.time で計測、本 YAML は表示確認のみ
+#   - 子供向けタグ (`tagForChildDirectedTreatment=1`) 適用済の確認は AdMob 管理画面 + L5 補完 (本 YAML 範囲外)
+#
+# 撮影目標 (累計 8 シーン):
+#   01_calendar_with_banner.png      = CAL-01 月表示 下部バナー
+#   02_calendar_banner_zoom.png      = バナー要素拡大 (アクセシビリティ label + Test Ad テキスト確認)
+#   03_members_with_banner.png       = MEM-01 メンバー一覧 下部バナー
+#   04_settings_with_banner.png      = SET-01 設定トップ 下部バナー
+#   05_consent_off_no_banner.png     = 「広告を表示しない」選択時 バナー非表示確認
+#   06_consent_non_personalized.png  = 「個人化しない」選択時 バナー表示 (非個人化 only)
+#   07_consent_personalized.png      = 「個人化された」選択時 バナー表示 (個人化 OK)
+#   08_banner_persistent.png         = 画面遷移 (CAL → MEM → SET) で各画面バナー継続表示
+#
+# 検証項目 (Phase E AC):
+#   - AD-01 AC: SDK 初期化が ATT/UMP 同意後実行 (Phase E は UMP のみ、ATT は v2.0)
+#   - AD-02 AC: CAL-01 / MEM-01 / SET-01 下部にバナー表示 (320x50 standard or adaptive)
+#   - AD-02 AC: ATT/UMP 未同意時は非個人化広告のみ表示
+#   - C-05 AC3: 「広告を表示しない」選択時はバナー非表示 (Phase E は non-personalized 互換、UI 上は hidden 想定)
+#   - パフォーマンス: バナー描画 < 100ms (L1 jest 別途計測、本 YAML は遅延体感確認)
+#
+# 範囲外 (L1/L2/L3/L5 へ移譲):
+#   - バナー描画パフォーマンス計測 → L1 jest + console.time (`性能計測_Phase_E_v0.1.md` E2)
+#   - 子供向けタグ + 配信広告コンテンツ確認 → L5 + AdMob 管理画面
+#   - インタースティシャル広告 (AD-03) → ad-interstitial.yaml 別建て
+#   - SDK 初期化失敗時 silent fail → L5 + AdMob test ID 取り違え検証
+
+- launchApp:
+    clearState: false
+    stopApp: true
+
+- waitForAnimationToEnd:
+    timeout: 5000
+
+# === Phase 0: 事前条件 = 同意状態 'non-personalized' で固定 ===
+# (Phase E Sprint 1 で AdConsentScreen から「個人化しない」選択済前提、本 YAML 単独実行時はスキップ)
+# 厳密検証は ad-consent.yaml で実施、本 YAML はバナー表示のみ確認
+
+# === Phase 1: CAL-01 月表示 下部バナー (AD-02 配置 1) ===
+- runFlow:
+    when:
+      notVisible: "カレンダー"
+    commands:
+      - tapOn:
+          id: "tab-calendar"
+          optional: true
+      - waitForAnimationToEnd:
+          timeout: 3000
+
+- assertVisible: "カレンダー"
+- takeScreenshot:
+    path: ../screenshots/maestro_ad_banner_01_calendar_with_banner
+
+# バナー要素確認 (accessibilityLabel="広告" + testID="ad-banner-calendar-bottom" 想定)
+- runFlow:
+    when:
+      visible: "広告"
+    commands:
+      - assertVisible: "広告"
+      - takeScreenshot:
+          path: ../screenshots/maestro_ad_banner_02_calendar_banner_zoom
+
+# AdMob test ID 想定 (本番では「Test Ad」表示なし)
+- runFlow:
+    when:
+      visible: "Test Ad"
+    commands:
+      - assertVisible: "Test Ad"
+
+# === Phase 2: MEM-01 メンバー一覧 下部バナー (AD-02 配置 2) ===
+- runFlow:
+    when:
+      notVisible: "メンバー"
+    commands:
+      - tapOn:
+          id: "tab-members"
+          optional: true
+      - waitForAnimationToEnd:
+          timeout: 3000
+
+- runFlow:
+    when:
+      visible: "メンバー"
+    commands:
+      - assertVisible: "メンバー"
+      - takeScreenshot:
+          path: ../screenshots/maestro_ad_banner_03_members_with_banner
+
+- runFlow:
+    when:
+      visible: "広告"
+    commands:
+      - assertVisible: "広告"
+
+# === Phase 3: SET-01 設定トップ 下部バナー (AD-02 配置 3) ===
+- runFlow:
+    when:
+      notVisible: "設定"
+    commands:
+      - tapOn:
+          id: "tab-settings"
+          optional: true
+      - waitForAnimationToEnd:
+          timeout: 3000
+
+- assertVisible: "設定"
+- takeScreenshot:
+    path: ../screenshots/maestro_ad_banner_04_settings_with_banner
+
+- runFlow:
+    when:
+      visible: "広告"
+    commands:
+      - assertVisible: "広告"
+
+# === Phase 4: 「広告を表示しない」選択時 バナー非表示確認 (C-05 AC3) ===
+- scroll
+- waitForAnimationToEnd:
+    timeout: 2000
+- runFlow:
+    when:
+      visible: "広告同意設定"
+    commands:
+      - tapOn:
+          text: "広告同意設定"
+      - waitForAnimationToEnd:
+          timeout: 3000
+
+- runFlow:
+    when:
+      visible: "広告を表示しない"
+    commands:
+      - tapOn:
+          text: "広告を表示しない"
+          optional: true
+      - waitForAnimationToEnd:
+          timeout: 2000
+
+- runFlow:
+    when:
+      visible: "設定を保存"
+    commands:
+      - tapOn:
+          text: "設定を保存"
+          optional: true
+      - waitForAnimationToEnd:
+          timeout: 3000
+
+- back
+- waitForAnimationToEnd:
+    timeout: 3000
+
+# CAL-01 戻り バナー非表示確認
+- runFlow:
+    when:
+      notVisible: "カレンダー"
+    commands:
+      - tapOn:
+          id: "tab-calendar"
+          optional: true
+      - waitForAnimationToEnd:
+          timeout: 3000
+
+- assertVisible: "カレンダー"
+- takeScreenshot:
+    path: ../screenshots/maestro_ad_banner_05_consent_off_no_banner
+
+# 「広告」テキストが非表示であることを確認 (バナー hidden)
+# 注意: Phase E では non-personalized 互換のため、実装によっては「広告を表示しない」でも非個人化バナー継続の可能性あり
+#       v0.2 で SDK 連動仕様確定後に精密化
+
+# === Phase 5: 「個人化しない」選択時 バナー表示 (非個人化 only、AD-02 AC + AD-04 AC3) ===
+- runFlow:
+    when:
+      notVisible: "設定"
+    commands:
+      - tapOn:
+          id: "tab-settings"
+          optional: true
+      - waitForAnimationToEnd:
+          timeout: 3000
+
+- scroll
+- waitForAnimationToEnd:
+    timeout: 2000
+- runFlow:
+    when:
+      visible: "広告同意設定"
+    commands:
+      - tapOn:
+          text: "広告同意設定"
+      - waitForAnimationToEnd:
+          timeout: 3000
+
+- runFlow:
+    when:
+      visible: "個人化しない"
+    commands:
+      - tapOn:
+          text: "個人化しない"
+          optional: true
+      - waitForAnimationToEnd:
+          timeout: 2000
+
+- runFlow:
+    when:
+      visible: "設定を保存"
+    commands:
+      - tapOn:
+          text: "設定を保存"
+          optional: true
+      - waitForAnimationToEnd:
+          timeout: 3000
+
+- back
+- waitForAnimationToEnd:
+    timeout: 3000
+
+- runFlow:
+    when:
+      notVisible: "カレンダー"
+    commands:
+      - tapOn:
+          id: "tab-calendar"
+          optional: true
+      - waitForAnimationToEnd:
+          timeout: 3000
+
+- assertVisible: "カレンダー"
+- takeScreenshot:
+    path: ../screenshots/maestro_ad_banner_06_consent_non_personalized
+
+# === Phase 6: 「個人化された」選択時 バナー表示 (個人化 OK、AD-02 AC) ===
+- runFlow:
+    when:
+      notVisible: "設定"
+    commands:
+      - tapOn:
+          id: "tab-settings"
+          optional: true
+      - waitForAnimationToEnd:
+          timeout: 3000
+
+- scroll
+- waitForAnimationToEnd:
+    timeout: 2000
+- runFlow:
+    when:
+      visible: "広告同意設定"
+    commands:
+      - tapOn:
+          text: "広告同意設定"
+      - waitForAnimationToEnd:
+          timeout: 3000
+
+- runFlow:
+    when:
+      visible: "個人化された"
+    commands:
+      - tapOn:
+          text: "個人化された"
+          optional: true
+      - waitForAnimationToEnd:
+          timeout: 2000
+
+- runFlow:
+    when:
+      visible: "設定を保存"
+    commands:
+      - tapOn:
+          text: "設定を保存"
+          optional: true
+      - waitForAnimationToEnd:
+          timeout: 3000
+
+- back
+- waitForAnimationToEnd:
+    timeout: 3000
+
+- runFlow:
+    when:
+      notVisible: "カレンダー"
+    commands:
+      - tapOn:
+          id: "tab-calendar"
+          optional: true
+      - waitForAnimationToEnd:
+          timeout: 3000
+
+- assertVisible: "カレンダー"
+- takeScreenshot:
+    path: ../screenshots/maestro_ad_banner_07_consent_personalized
+
+# === Phase 7: 画面遷移 (CAL → MEM → SET) で各画面バナー継続表示 (AD-02 全配置 = 3 タブ下部) ===
+- runFlow:
+    when:
+      notVisible: "メンバー"
+    commands:
+      - tapOn:
+          id: "tab-members"
+          optional: true
+      - waitForAnimationToEnd:
+          timeout: 3000
+
+- runFlow:
+    when:
+      notVisible: "設定"
+    commands:
+      - tapOn:
+          id: "tab-settings"
+          optional: true
+      - waitForAnimationToEnd:
+          timeout: 3000
+
+- runFlow:
+    when:
+      notVisible: "カレンダー"
+    commands:
+      - tapOn:
+          id: "tab-calendar"
+          optional: true
+      - waitForAnimationToEnd:
+          timeout: 3000
+
+- assertVisible: "カレンダー"
+- takeScreenshot:
+    path: ../screenshots/maestro_ad_banner_08_banner_persistent

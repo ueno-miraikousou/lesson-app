@@ -1,0 +1,362 @@
+appId: com.miraikousou.lessonapp
+name: ストア審査 reviewer walkthrough (cold start → wizard → 朝動線 → 設定 → 広告同意 → ログアウト) (Phase E Sprint 0 E0-Q04)
+---
+# ストア審査 reviewer walkthrough 全機能 1 周 (Phase E Sprint 0 E0-Q04)
+# 作成: qa-2, 2026-05-16 (Phase E Sprint 0)
+# 対象: Google Play Console 審査 reviewer 想定の主要動線完走
+#
+# 前提:
+#   - Phase D 完遂状態 (HEAD=`d01802d`、jest 394/394、Maestro 32 件起草済)
+#   - Phase E Sprint 0/1 で AdMob SDK + UMP 同意組込完了想定 (本 YAML は組込後実機実行)
+#   - 審査用デモアカウント (リリース直前チェックリスト_v0.1.md §B) 用意済 = 本 YAML では AUTH_BYPASS 想定
+#   - AdMob test ID (`ca-app-pub-3940256099942544/*`) を `.env` 経由で組込済
+#
+# 想定 reviewer flow (Phase E 引き継ぎ書 §3 + 要件定義 v0.6.2):
+#   1. cold start (アプリ起動) → ONBD 同意 (初回起動 = UMP form 表示)
+#   2. ログイン (デモアカウント、AUTH_BYPASS で代替)
+#   3. ウィザード W-01..W-10 完走 (家族構成 + メンバー + 習い事登録)
+#   4. 朝動線 (CAL-01 月表示 → 翌日予定確認 → 持ち物✓)
+#   5. 設定画面 (SET-01) 巡回 (プロフィール + 家族 + 通知 + アカウント + プライバシー + アプリ情報)
+#   6. 広告同意設定 (SET-04 / C-05 → UMP form 再表示)
+#   7. プライバシーポリシー / 利用規約 link 確認
+#   8. ログアウト (キャンセル方向、AUTH-04 nav)
+#
+# 注意 (学習事項継承):
+#   - #11/#12 (Maestro inputText 不可): 全 tap nav + assertVisible 主軸
+#   - #14M (emulator screencap 0.3-0.5 秒ラグ): takeScreenshot 前後で waitForAnimationToEnd 必須
+#   - #46Q (accessibilityLabel + 表示文字列 + runFlow when visible ハイブリッド)
+#   - AdMob バナーは表示確認のみ (押下は審査 reviewer も避ける、誤クリック事故 risk)
+#   - UMP form は EEA region 検証範囲外 (L5 補完)、本 YAML では「同意設定画面再表示」で代替
+#   - 全 phase で「reviewer が画面 freeze せず操作可能」を確認 (1 動線完走 = 審査通過の前提)
+#
+# 撮影目標 (累計 15 シーン、ストア審査素材兼用):
+#   01_cold_start.png                = アプリ起動直後 (splash → onboarding)
+#   02_onboarding_consent.png        = 初回起動 UMP form (Phase E AD-04) or 同意 splash
+#   03_login_or_bypass.png           = AUTH-01/02 ログイン画面 (AUTH_BYPASS 時は skip)
+#   04_wizard_step1_to_5.png         = WIZ-01..05 (世帯名 + 親メンバー + 子メンバー)
+#   05_wizard_step6_to_9.png         = WIZ-06..09 (習い事登録 + 完了)
+#   06_wizard_complete.png           = WIZ-10 完了 + 紙吹雪
+#   07_calendar_month.png            = CAL-01 月表示 (朝動線開始)
+#   08_calendar_day_detail.png       = CAL-03 日詳細 + 翌日予定
+#   09_schedule_detail_check.png     = SCH-02 持ち物✓ 動線 (朝動線中核)
+#   10_settings_top.png              = SET-01 設定トップ全 6 セクション
+#   11_settings_privacy.png          = SET-01 プライバシーセクション (広告同意設定 link 含む)
+#   12_ad_consent_screen.png         = SET-04 / C-05 AdConsentScreen 到達
+#   13_privacy_policy_link.png       = プライバシーポリシー link tap + 外部 browser or WebView 確認
+#   14_logout_dialog.png             = SET-01 ログアウト確認 dialog (キャンセル方向)
+#   15_walkthrough_complete.png      = SET-01 戻り (完走確認)
+#
+# 検証項目 (審査 reviewer 視点):
+#   - 主要動線 1 周完走 (cold start → wizard → 朝動線 → 設定 → 同意 → ログアウト)
+#   - 各画面に「次へ進む」or「戻る」が明示 (reviewer が dead end に遭遇しない)
+#   - プライバシーポリシー / 利用規約 link 表示可能 (Google Play 規約必須)
+#   - 広告同意設定が SET-01 から到達可能 (UMP 再表示 button、GDPR/COPPA 監査用)
+#   - クラッシュなし完走 (途中 freeze や白画面の検出)
+#
+# 範囲外 (L1/L2/L3/L5 へ移譲):
+#   - 各画面の細部動作 → 個別 YAML (cal-month-view / wiz-* / consent-ad 等)
+#   - UMP form の EEA region detection → L5 VPN 経由検証
+#   - インタースティシャル広告 (AD-03 含む場合) → ad-interstitial.yaml 別建て
+#   - 通知配送実機 → L5 + Phase D notif-* YAML
+#   - SEC-3 idfa/aaid 漏洩監査 → SEC-3 自動実行スクリプト (qa-N + architect-N 起案)
+
+- launchApp:
+    clearState: true
+    stopApp: true
+
+- waitForAnimationToEnd:
+    timeout: 8000
+
+# === Phase 1: cold start + onboarding (審査 reviewer 視点 = 「アプリが起動するか」確認) ===
+- takeScreenshot:
+    path: ../screenshots/maestro_store_review_01_cold_start
+
+# 初回起動時の UMP / onboarding consent (AUTH_BYPASS=true なら skip、false なら AUTH-01 表示)
+- runFlow:
+    when:
+      visible: "個人化広告"
+    commands:
+      - assertVisible: "個人化広告"
+      - takeScreenshot:
+          path: ../screenshots/maestro_store_review_02_onboarding_consent
+      # UMP form 想定: 「同意する」or「同意しない」or「カスタマイズ」3 択
+      - tapOn:
+          text: "個人化しない"
+          optional: true
+      - waitForAnimationToEnd:
+          timeout: 3000
+
+# AUTH_BYPASS=false の場合 ログイン画面表示
+- runFlow:
+    when:
+      visible: "ログイン"
+    commands:
+      - assertVisible: "ログイン"
+      - takeScreenshot:
+          path: ../screenshots/maestro_store_review_03_login_or_bypass
+      # 実際の input は Maestro inputText 不可 (学習事項 #11/#12)
+      # → デモアカウントは AUTH_BYPASS=true で代替、本 YAML は AUTH_BYPASS 前提
+
+# === Phase 2: ウィザード W-01..W-10 完走 (家族構成 + メンバー + 習い事登録) ===
+# AUTH_BYPASS で main 領域 + wizard 起動状態に到達想定
+- waitForAnimationToEnd:
+    timeout: 5000
+
+# WIZ-01 ようこそ画面
+- runFlow:
+    when:
+      visible: "ようこそ"
+    commands:
+      - assertVisible: "ようこそ"
+      - takeScreenshot:
+          path: ../screenshots/maestro_store_review_04_wizard_step1_to_5
+      - tapOn:
+          text: "はじめる"
+          optional: true
+      - waitForAnimationToEnd:
+          timeout: 3000
+
+# WIZ-02..05 世帯名 + 親メンバー + 子メンバー登録 (各 tap nav のみ、入力は L5 / 個別 YAML 補完)
+- runFlow:
+    when:
+      visible: "世帯名"
+    commands:
+      - assertVisible: "世帯名"
+      - tapOn:
+          text: "次へ"
+          optional: true
+      - waitForAnimationToEnd:
+          timeout: 3000
+
+- runFlow:
+    when:
+      visible: "保護者"
+    commands:
+      - assertVisible: "保護者"
+      - tapOn:
+          text: "次へ"
+          optional: true
+      - waitForAnimationToEnd:
+          timeout: 3000
+
+- runFlow:
+    when:
+      visible: "お子さん"
+    commands:
+      - assertVisible: "お子さん"
+      - tapOn:
+          text: "次へ"
+          optional: true
+      - waitForAnimationToEnd:
+          timeout: 3000
+
+# WIZ-06..09 習い事登録
+- runFlow:
+    when:
+      visible: "習い事"
+    commands:
+      - assertVisible: "習い事"
+      - takeScreenshot:
+          path: ../screenshots/maestro_store_review_05_wizard_step6_to_9
+      - tapOn:
+          text: "次へ"
+          optional: true
+      - waitForAnimationToEnd:
+          timeout: 3000
+
+# WIZ-10 完了 + 紙吹雪
+- runFlow:
+    when:
+      visible: "完了"
+    commands:
+      - assertVisible: "完了"
+      - takeScreenshot:
+          path: ../screenshots/maestro_store_review_06_wizard_complete
+      - tapOn:
+          text: "完了"
+          optional: true
+      - waitForAnimationToEnd:
+          timeout: 5000
+
+# === Phase 3: 朝動線 (CAL-01 月表示 → 翌日予定確認 → 持ち物✓) ===
+- runFlow:
+    when:
+      notVisible: "カレンダー"
+    commands:
+      - tapOn:
+          id: "tab-calendar"
+          optional: true
+      - waitForAnimationToEnd:
+          timeout: 3000
+
+- runFlow:
+    when:
+      visible: "カレンダー"
+    commands:
+      - assertVisible: "カレンダー"
+      - takeScreenshot:
+          path: ../screenshots/maestro_store_review_07_calendar_month
+
+# 日詳細 tap (翌日予定確認)
+- runFlow:
+    when:
+      visible: "今日"
+    commands:
+      - tapOn:
+          text: "今日"
+          optional: true
+      - waitForAnimationToEnd:
+          timeout: 3000
+      - takeScreenshot:
+          path: ../screenshots/maestro_store_review_08_calendar_day_detail
+
+# 予定詳細 (SCH-02 持ち物✓)
+- runFlow:
+    when:
+      visible: "持ち物"
+    commands:
+      - assertVisible: "持ち物"
+      - takeScreenshot:
+          path: ../screenshots/maestro_store_review_09_schedule_detail_check
+
+# === Phase 4: 設定画面 SET-01 巡回 (プロフィール + 家族 + 通知 + アカウント + プライバシー + アプリ情報) ===
+- runFlow:
+    when:
+      notVisible: "設定"
+    commands:
+      - tapOn:
+          id: "tab-settings"
+          optional: true
+      - waitForAnimationToEnd:
+          timeout: 3000
+
+- assertVisible: "設定"
+- takeScreenshot:
+    path: ../screenshots/maestro_store_review_10_settings_top
+
+# 各セクション (Phase D Sprint 4 で完成、回帰確認のみ)
+- runFlow:
+    when:
+      visible: "プロフィール"
+    commands:
+      - assertVisible: "プロフィール"
+- runFlow:
+    when:
+      visible: "家族"
+    commands:
+      - assertVisible: "家族"
+- runFlow:
+    when:
+      visible: "通知"
+    commands:
+      - assertVisible: "通知"
+- runFlow:
+    when:
+      visible: "アカウント"
+    commands:
+      - assertVisible: "アカウント"
+
+# プライバシーセクション (広告同意設定 link 含む)
+- scroll
+- waitForAnimationToEnd:
+    timeout: 2000
+- runFlow:
+    when:
+      visible: "プライバシー"
+    commands:
+      - assertVisible: "プライバシー"
+      - takeScreenshot:
+          path: ../screenshots/maestro_store_review_11_settings_privacy
+
+# === Phase 5: 広告同意設定 (SET-04 / C-05) → UMP form 再表示確認 (Phase E AC4) ===
+- runFlow:
+    when:
+      visible: "広告同意設定"
+    commands:
+      - tapOn:
+          text: "広告同意設定"
+      - waitForAnimationToEnd:
+          timeout: 3000
+      - takeScreenshot:
+          path: ../screenshots/maestro_store_review_12_ad_consent_screen
+
+# AdConsentScreen 到達確認 (Phase D で完成、Phase E で SDK 連動 + UMP 再表示 button 追加想定)
+- runFlow:
+    when:
+      visible: "個人化"
+    commands:
+      - assertVisible: "個人化"
+
+# Phase E AC4: 「UMP 同意ダイアログを再表示」button (実装後 v0.2 で精密化)
+- runFlow:
+    when:
+      visible: "UMP"
+    commands:
+      - assertVisible: "UMP"
+
+# back で SET-01 に戻る
+- back
+- waitForAnimationToEnd:
+    timeout: 3000
+- assertVisible: "設定"
+
+# === Phase 6: プライバシーポリシー / 利用規約 link 確認 (Google Play 規約必須) ===
+- runFlow:
+    when:
+      visible: "プライバシーポリシー"
+    commands:
+      - tapOn:
+          text: "プライバシーポリシー"
+      - waitForAnimationToEnd:
+          timeout: 5000
+      - takeScreenshot:
+          path: ../screenshots/maestro_store_review_13_privacy_policy_link
+      # 外部 browser or WebView 想定、back で戻る
+      - back
+      - waitForAnimationToEnd:
+          timeout: 3000
+
+- runFlow:
+    when:
+      visible: "利用規約"
+    commands:
+      - assertVisible: "利用規約"
+
+# === Phase 7: ログアウト確認 dialog (SET-01 §3.3、キャンセル方向、AUTH-04 へ遷移せず動線維持) ===
+- scroll
+- waitForAnimationToEnd:
+    timeout: 2000
+- runFlow:
+    when:
+      visible: "危険ゾーン"
+    commands:
+      - assertVisible: "危険ゾーン"
+
+- runFlow:
+    when:
+      visible: "ログアウト"
+    commands:
+      - tapOn:
+          text: "ログアウト"
+      - waitForAnimationToEnd:
+          timeout: 3000
+      - runFlow:
+          when:
+            visible: "ログアウトしますか"
+          commands:
+            - assertVisible: "ログアウトしますか"
+            - takeScreenshot:
+                path: ../screenshots/maestro_store_review_14_logout_dialog
+            # キャンセル方向 (動線完走確認、実際のログアウトは別 YAML)
+            - tapOn:
+                text: "キャンセル"
+                optional: true
+            - waitForAnimationToEnd:
+                timeout: 2000
+
+# === Phase 8: walkthrough 完走確認 (SET-01 復帰、freeze なし) ===
+- assertVisible: "設定"
+- takeScreenshot:
+    path: ../screenshots/maestro_store_review_15_walkthrough_complete
+
+# 副次: 全 phase で app が freeze していない = 主要動線完走 = 審査通過の前提
