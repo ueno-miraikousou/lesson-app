@@ -3,19 +3,111 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>プライバシーポリシー — 習い事管理アプリ（準備中）</title>
+  <title>プライバシーポリシー — 習い事管理アプリ</title>
   <style>
-    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Hiragino Kaku Gothic ProN", "Yu Gothic", sans-serif; max-width: 720px; margin: 4rem auto; padding: 0 1rem; color: #2D1F1A; background: #FFF8F5; line-height: 1.7; }
-    h1 { color: #E76A85; }
-    .notice { background: #FFD0DA; padding: 1rem; border-radius: 8px; margin: 1rem 0; }
+    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Hiragino Kaku Gothic ProN", "Yu Gothic", sans-serif; max-width: 720px; margin: 2rem auto; padding: 0 1rem; color: #2D1F1A; background: #FFF8F5; line-height: 1.8; }
+    h1 { color: #E76A85; border-bottom: 2px solid #FFD0DA; padding-bottom: 0.5rem; }
+    h2 { color: #E76A85; margin-top: 2rem; border-left: 4px solid #E76A85; padding-left: 0.6rem; }
+    h3 { margin-top: 1.5rem; color: #5A3F36; }
+    .draft-notice { background: #FFE9CC; border: 1px solid #E76A85; padding: 1rem; border-radius: 8px; margin: 1rem 0; }
+    .tbd { background: #FFD0DA; padding: 0.2rem 0.4rem; border-radius: 4px; font-weight: bold; }
+    table { border-collapse: collapse; width: 100%; margin: 1rem 0; }
+    th, td { border: 1px solid #FFD0DA; padding: 0.6rem; text-align: left; vertical-align: top; }
+    th { background: #FFE9CC; }
+    a { color: #E76A85; }
+    .meta { font-size: 0.85rem; color: #8A6F66; }
   </style>
 </head>
 <body>
-  <h1>プライバシーポリシー（準備中）</h1>
-  <div class="notice">
-    <p><strong>このページは現在準備中です。</strong></p>
-    <p>正式な文面は、アプリ第1弾リリース時に公開予定です。</p>
+  <h1>プライバシーポリシー</h1>
+  <p class="meta">バージョン: 0.2 ドラフト（専門家レビュー前） / 最終更新: 2026-05-16</p>
+
+  <div class="draft-notice">
+    <p><strong>本ポリシーは現在ドラフト版です。</strong>本文は弁護士または行政書士による法的レビューを受けたうえで正式公開予定です。<span class="tbd">TBD</span> と記載された箇所は、社長確定または法的レビュー結果を反映する予定です。</p>
   </div>
-  <p><a href="./index.html">トップページに戻る</a></p>
+
+  <h2>1. 事業者情報</h2>
+  <table>
+    <tr><th>項目</th><th>内容</th></tr>
+    <tr><td>アプリ名</td><td><span class="tbd">TBD（社長確定待ち、仮称「習い事管理アプリ」）</span></td></tr>
+    <tr><td>提供者</td><td>上野（個人事業主）</td></tr>
+    <tr><td>お問い合わせ</td><td><a href="mailto:support@miraikousou.com">support@miraikousou.com</a> <span class="tbd">TBD（社長確定待ち）</span></td></tr>
+  </table>
+
+  <h2>2. 取得する情報と利用目的</h2>
+  <table>
+    <tr><th>取得する情報</th><th>取得方法</th><th>利用目的</th></tr>
+    <tr><td>メールアドレス</td><td>ユーザー入力（サインアップ時）</td><td>アカウント認証、パスワードリセット、重要なお知らせ通知</td></tr>
+    <tr><td>ニックネーム（任意）</td><td>ユーザー入力</td><td>世帯内メンバー表示</td></tr>
+    <tr><td>子どもの情報（ニックネーム / 学年 / 習い事スケジュール / 持ち物）</td><td>ユーザー入力</td><td>習い事スケジュール管理機能の提供</td></tr>
+    <tr><td>世帯共有招待コード</td><td>ユーザー入力 / アプリ自動生成</td><td>家族メンバー間の世帯共有</td></tr>
+    <tr><td>デバイス識別子（広告 ID: AAID / IDFA）</td><td>ユーザー同意取得後、AdMob SDK 経由で自動取得</td><td>広告配信、広告効果測定（同意拒否時は非個人化広告のみ）</td></tr>
+    <tr><td>クラッシュログ / 利用統計</td><td>アプリ自動取得</td><td>不具合修正、品質改善 <span class="tbd">TBD（Sentry / Firebase Crashlytics 等の利用可否は実装確定後反映）</span></td></tr>
+  </table>
+
+  <h2>3. 子どもの情報の取扱い</h2>
+  <p>本アプリは家族の習い事管理を目的としており、保護者が子どもの情報を入力する設計です。以下を遵守します:</p>
+  <ul>
+    <li>子ども本人によるアカウント作成は想定していません。アカウント作成および情報入力は 18 歳以上の保護者が行います。</li>
+    <li>子どもの情報は世帯内（保護者・家族メンバー）のみで共有され、外部に提供しません。</li>
+    <li>広告配信時は「子供向け扱い（TFCD: Tag for Children Directed Treatment）」を有効化し、個人化広告を無効化します。</li>
+    <li>位置情報・連絡先・カメラへのアクセスは取得しません（Android 端末ではブロックリストで明示）。</li>
+    <li>COPPA（米児童オンラインプライバシー保護法）および日本国内法令を遵守します。 <span class="tbd">TBD（専門家レビューで補強）</span></li>
+  </ul>
+
+  <h2>4. 第三者提供</h2>
+  <p>取得した情報は、以下の場合を除き第三者に提供しません:</p>
+  <ul>
+    <li>ユーザーの同意がある場合</li>
+    <li>法令に基づく開示請求がある場合</li>
+    <li>下記の業務委託先（個人情報保護契約締結済）</li>
+  </ul>
+  <h3>4.1 業務委託先</h3>
+  <table>
+    <tr><th>委託先</th><th>委託内容</th><th>提供する情報</th></tr>
+    <tr><td>Supabase Inc.（米国）</td><td>データベース / 認証基盤</td><td>メールアドレス、入力データ全般</td></tr>
+    <tr><td>Google LLC（米国、AdMob / UMP）</td><td>広告配信、同意管理</td><td>広告 ID（AAID / IDFA）、同意状態</td></tr>
+    <tr><td>Expo / EAS Build（米国）</td><td>アプリ配布基盤</td><td>クラッシュログ（実装時のみ）</td></tr>
+  </table>
+
+  <h2>5. 広告について</h2>
+  <p>本アプリは Google AdMob を利用してバナー広告を表示します。広告配信のため、以下を取得・利用します:</p>
+  <ul>
+    <li>広告識別子（Android: AAID、iOS: IDFA）— ユーザー同意取得後のみ</li>
+    <li>同意管理: Google UMP（User Messaging Platform）SDK 経由でユーザー選択を取得し、AdMob SDK に反映</li>
+    <li>同意拒否時: 非個人化広告（汎用広告）のみ配信</li>
+    <li>「広告を非表示にする」選択時: 広告 SDK 初期化をスキップし、広告 ID も取得しません</li>
+  </ul>
+  <p>広告同意の変更は、アプリ内 設定 → プライバシー → 広告に関する設定 から可能です。</p>
+
+  <h2>6. データの保存期間</h2>
+  <p>ユーザーが退会するまで保持します。退会操作（設定 → アカウント → 退会する）後、関連データは速やかに削除します。 <span class="tbd">TBD（バックアップからの完全削除タイミングは Phase E Sprint 1 で確定予定）</span></p>
+
+  <h2>7. ユーザーの権利</h2>
+  <p>ユーザーは以下の権利を行使できます:</p>
+  <ul>
+    <li>登録情報の閲覧・修正（アプリ内 設定）</li>
+    <li>アカウント削除（退会操作）</li>
+    <li>広告同意の変更（アプリ内 設定）</li>
+    <li>その他開示・利用停止・第三者提供停止の請求（下記お問い合わせ窓口宛）</li>
+  </ul>
+
+  <h2>8. セキュリティ</h2>
+  <p>取得した情報は適切なセキュリティ対策（通信の暗号化、行レベルセキュリティ、アクセス制御）を施し、漏えい・滅失・毀損の防止に努めます。</p>
+
+  <h2>9. プライバシーポリシーの変更</h2>
+  <p>本ポリシーは予告なく変更される場合があります。変更後は本ページにて速やかに公開します。重要な変更は、アプリ内通知またはメールでお知らせします。</p>
+
+  <h2>10. お問い合わせ窓口</h2>
+  <p>本ポリシーまたは個人情報の取扱いに関するお問い合わせは、以下までご連絡ください:</p>
+  <p>メールアドレス: <a href="mailto:support@miraikousou.com">support@miraikousou.com</a> <span class="tbd">TBD（社長確定待ち）</span></p>
+
+  <hr>
+  <p class="meta"><a href="./index.html">トップページに戻る</a></p>
+  <p class="meta">改訂履歴:<br>
+    v0.1 (2026-05-08): 準備中スタブ<br>
+    v0.2 (2026-05-16): 骨子ドラフト起草（mobile-engineer-5、専門家レビュー前）<br>
+    v0.3 (予定): 弁護士・行政書士レビュー反映後、社長承認後の正式公開版
+  </p>
 </body>
 </html>

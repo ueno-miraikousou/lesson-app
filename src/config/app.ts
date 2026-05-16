@@ -6,6 +6,10 @@
  *      02_設計/mobile-engineer引継ぎサマリ.md §5.5, §5.6, §5.9
  */
 
+// TBD (Phase E E2-T01): APP_DISPLAY_NAME は社長確定待ち (候補「家族の習い事」「みらいこうそう習い事」等)。
+//   - Google Play Console 申請前 (Sprint 3 着手前) に社長判断必須。
+//   - 変更時は app.config.ts の APP_DISPLAY_NAME / docs/privacy.html / docs/terms.html / docs/store/store-description-draft.md も同期更新。
+//   - 商標調査 (J-PlatPat) は architect-N で実施想定。
 export const APP_DISPLAY_NAME = '習い事管理アプリ' as const;
 export const APP_SLUG = 'lesson-app' as const;
 

@@ -12,7 +12,10 @@
 import 'dotenv/config';
 import type { ExpoConfig, ConfigContext } from 'expo/config';
 
-// 暫定: 正式名称確定時に置換
+// TBD (Phase E E2-T01): 正式名称は社長確定待ち (候補「家族の習い事」「みらいこうそう習い事」等)。
+//   - Google Play Console 申請前 (Sprint 2 末 〜 Sprint 3 着手前) に社長判断必須。
+//   - 変更時は src/config/app.ts の APP_DISPLAY_NAME も同期更新 + docs/privacy.html / terms.html / store-description-draft.md も差替え。
+//   - 商標調査 (J-PlatPat) は architect-N で実施想定。
 const APP_DISPLAY_NAME = '習い事管理アプリ';
 const APP_SLUG = 'lesson-app';
 const DEEPLINK_SCHEME = 'learnapp';

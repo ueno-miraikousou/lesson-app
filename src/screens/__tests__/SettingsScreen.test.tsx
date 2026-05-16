@@ -5,8 +5,11 @@
  *   - 全主要メニュー項目の表示 (testID)
  *   - 通知設定タップ → router.push('/(main)/notifications')
  *   - プライバシー URL タップ → Linking.openURL
+ *   - 利用規約 URL タップ → Linking.openURL
+ *   - お問い合わせタップ → Linking.openURL('mailto:...') (Phase E E2-T01)
  *   - 退会タップ → router.push('/(main)/account/delete')
  *   - バージョン情報表示
+ *   - プロフィール編集タップ → router.push('/(main)/profile')
  */
 
 import { fireEvent, screen } from '@testing-library/react-native';
@@ -65,6 +68,27 @@ describe('SettingsScreen (SET-01 / C-02)', () => {
     expect(Linking.openURL).toHaveBeenCalled();
     const calledUrl = (Linking.openURL as jest.Mock).mock.calls[0][0];
     expect(calledUrl).toContain('terms');
+  });
+
+  it('お問い合わせタップ → Linking.openURL("mailto:...") (Phase E E2-T01)', () => {
+    renderWithProviders(<SettingsScreen />);
+    fireEvent.press(screen.getByTestId('settings-link-contact'));
+    expect(Linking.openURL).toHaveBeenCalled();
+    const calledUrl = (Linking.openURL as jest.Mock).mock.calls[0][0] as string;
+    expect(calledUrl.startsWith('mailto:')).toBe(true);
+    expect(calledUrl).toContain('@');
+  });
+
+  it('プロフィール編集タップ → /(main)/profile', () => {
+    renderWithProviders(<SettingsScreen />);
+    fireEvent.press(screen.getByTestId('settings-link-profile'));
+    expect(mockPush).toHaveBeenCalledWith('/(main)/profile');
+  });
+
+  it('ライセンスタップ → /(main)/settings/licenses', () => {
+    renderWithProviders(<SettingsScreen />);
+    fireEvent.press(screen.getByTestId('settings-link-licenses'));
+    expect(mockPush).toHaveBeenCalledWith('/(main)/settings/licenses');
   });
 
   it('退会タップ → /(main)/account/delete', () => {
