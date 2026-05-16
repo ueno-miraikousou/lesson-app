@@ -4,6 +4,7 @@ import { ActivityIndicator, Pressable, Text, View } from 'react-native';
 import { ScrollView } from 'react-native-gesture-handler';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { AdBanner } from '../components/ads/AdBanner';
 import { PrimaryButton } from '../components/ui/PrimaryButton';
 import { fetchLessonsWithMembers, type LessonWithMember } from '../lib/lessons';
 import { useAuthStore } from '../stores/auth-store';
@@ -102,6 +103,8 @@ export function LessonsListScreen() {
           ))}
         </ScrollView>
       )}
+
+      <AdBanner testID="lessons-list-ad-banner" />
     </SafeAreaView>
   );
 }

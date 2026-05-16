@@ -9,6 +9,7 @@ import {
   ScheduleFormSheet,
   type ScheduleFormInitialValues,
 } from '../components/forms/ScheduleFormSheet';
+import { AdBanner } from '../components/ads/AdBanner';
 import { PrimaryButton } from '../components/ui/PrimaryButton';
 import { signOut } from '../lib/auth';
 import {
@@ -677,6 +678,8 @@ export function CalendarScreen() {
       >
         <Text className="text-h1 text-white" style={{ color: '#FFFFFF' }}>＋</Text>
       </Pressable>
+
+      <AdBanner testID="calendar-ad-banner" />
 
       <View
         className="border-t border-border bg-surface px-4 py-3"

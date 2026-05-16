@@ -9,6 +9,7 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
 
 import { RealtimeToastHost } from '../components/ui/RealtimeToastHost';
+import { useAds } from '../features/ads/use-ads';
 import { useAuthSession } from '../hooks/use-auth-session';
 import { queryClient } from '../lib/query-client';
 import { useAuthStore } from '../stores/auth-store';
@@ -87,8 +88,12 @@ function HydrationSplash() {
   );
 }
 
+// AUTH_BYPASS 中は SDK 初期化スキップ (screenshot 取得経路を阻害しない)
+const ADS_ENABLED = process.env.EXPO_PUBLIC_AUTH_BYPASS !== 'true';
+
 function RootContent() {
   useAuthSession();
+  useAds({ enabled: ADS_ENABLED });
   const isHydrating = useAuthStore((s) => s.isHydrating);
 
   if (isHydrating) {

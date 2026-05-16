@@ -25,6 +25,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { PrimaryButton } from '../components/ui/PrimaryButton';
 import { URLS } from '../config/urls';
 import { colors } from '../theme/colors';
+import { reshowConsentForm as defaultReshowConsentForm } from '../features/ads/consent-bridge';
 
 export type AdConsentState = 'personalized' | 'non-personalized' | 'no-ads';
 
@@ -88,13 +89,23 @@ export interface AdConsentScreenProps {
   storage?: typeof AsyncStorage;
   /** 保存完了後の遷移先 (デフォルト router.back) */
   onSaved?: (state: AdConsentState) => void;
+  /**
+   * Phase E Sprint 1: UMP form 再表示の DI フック (テスト用)。
+   * 既定は features/ads/consent-bridge の reshowConsentForm。
+   */
+  reshowConsentForm?: () => Promise<AdConsentState>;
 }
 
-export function AdConsentScreen({ storage = AsyncStorage, onSaved }: AdConsentScreenProps = {}) {
+export function AdConsentScreen({
+  storage = AsyncStorage,
+  onSaved,
+  reshowConsentForm = defaultReshowConsentForm,
+}: AdConsentScreenProps = {}) {
   const router = useRouter();
   const [selected, setSelected] = useState<AdConsentState>('non-personalized');
   const [initialLoaded, setInitialLoaded] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [reshowing, setReshowing] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -112,7 +123,7 @@ export function AdConsentScreen({ storage = AsyncStorage, onSaved }: AdConsentSc
   async function handleSubmit() {
     setSaving(true);
     try {
-      // Phase D UI のみ: AsyncStorage に保存して終了。Phase E で UMP SDK 連動。
+      // Phase E Sprint 1: AsyncStorage に保存後、ad 配信フラグは features/ads/consent-bridge.applyConsentChoice 経由
       await saveAdConsentState(selected, storage);
       if (onSaved) {
         onSaved(selected);
@@ -126,6 +137,18 @@ export function AdConsentScreen({ storage = AsyncStorage, onSaved }: AdConsentSc
       }
     } finally {
       setSaving(false);
+    }
+  }
+
+  async function handleReshowConsentForm() {
+    setReshowing(true);
+    try {
+      const next = await reshowConsentForm();
+      setSelected(next);
+    } catch (error) {
+      console.warn('[AdConsentScreen] reshowConsentForm failed', error);
+    } finally {
+      setReshowing(false);
     }
   }
 
@@ -224,6 +247,25 @@ export function AdConsentScreen({ storage = AsyncStorage, onSaved }: AdConsentSc
             disabled={!initialLoaded}
             testID="consent-submit"
           />
+        </View>
+
+        <View className="mt-6">
+          <Pressable
+            onPress={handleReshowConsentForm}
+            disabled={reshowing}
+            accessibilityRole="button"
+            accessibilityLabel="同意フォームを再表示"
+            accessibilityHint="EU の同意ダイアログを再度開きます"
+            testID="consent-reshow-form"
+            className="min-h-tap items-center justify-center rounded-button border border-border bg-surface px-4 py-3"
+          >
+            <Text className="text-body text-text-primary">
+              {reshowing ? '読み込み中…' : '同意フォームを再表示する'}
+            </Text>
+          </Pressable>
+          <Text className="mt-2 text-caption text-text-secondary">
+            EU 圏でご利用の場合や、選択を変更したい場合にお使いください。
+          </Text>
         </View>
       </ScrollView>
     </SafeAreaView>

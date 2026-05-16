@@ -21,6 +21,7 @@ import { useRouter } from 'expo-router';
 import { Pressable, ScrollView, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { AdBanner } from '../components/ads/AdBanner';
 import { APP_DISPLAY_NAME } from '../config/app';
 import { URLS } from '../config/urls';
 import { colors } from '../theme/colors';
@@ -218,6 +219,8 @@ export function SettingsScreen() {
 
         <View className="h-12" />
       </ScrollView>
+
+      <AdBanner testID="settings-ad-banner" />
     </SafeAreaView>
   );
 }

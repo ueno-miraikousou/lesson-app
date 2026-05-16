@@ -162,4 +162,32 @@ describe('AdConsentScreen (AD-01 / C-05)', () => {
       expect(mockReplace).toHaveBeenCalledWith('/(main)/calendar');
     });
   });
+
+  it('Phase E: 同意フォーム再表示ボタンが表示される (UMP form trigger)', async () => {
+    const storage = buildStorage(null);
+    renderWithProviders(<AdConsentScreen storage={storage as never} />);
+    await waitFor(() => {
+      expect(screen.getByTestId('consent-reshow-form')).toBeTruthy();
+    });
+    expect(screen.getByLabelText('同意フォームを再表示')).toBeTruthy();
+  });
+
+  it('Phase E: reshowConsentForm DI が呼ばれて選択状態が更新される', async () => {
+    const storage = buildStorage(null);
+    const reshow = jest.fn().mockResolvedValue('personalized');
+    renderWithProviders(
+      <AdConsentScreen storage={storage as never} reshowConsentForm={reshow} />,
+    );
+    await waitFor(() => {
+      expect(screen.getByTestId('consent-reshow-form')).toBeTruthy();
+    });
+    fireEvent.press(screen.getByTestId('consent-reshow-form'));
+    await waitFor(() => {
+      expect(reshow).toHaveBeenCalled();
+    });
+    await waitFor(() => {
+      const node = screen.getByTestId('consent-option-personalized');
+      expect(node.props.accessibilityState?.selected).toBe(true);
+    });
+  });
 });

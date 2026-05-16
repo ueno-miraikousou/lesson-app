@@ -155,6 +155,114 @@ jest.mock('expo-av', () => ({
 }));
 
 // ---------------------------------------------------------------
+// react-native-google-mobile-ads (Phase E Sprint 1 AD-01..AD-04)
+// SDK 全体を mock、テストで個別に上書き可能
+// ADR-009 §2.7 jest mock 戦略に準拠
+// ---------------------------------------------------------------
+jest.mock('react-native-google-mobile-ads', () => {
+  const React = require('react');
+  const { View } = require('react-native');
+  const mobileAdsInstance = {
+    initialize: jest.fn(() => Promise.resolve({ initializationStatus: 'success' })),
+    setRequestConfiguration: jest.fn(() => Promise.resolve()),
+    openAdInspector: jest.fn(() => Promise.resolve()),
+  };
+  return {
+    __esModule: true,
+    default: jest.fn(() => mobileAdsInstance),
+    MobileAds: jest.fn(() => mobileAdsInstance),
+    AdsConsent: {
+      requestInfoUpdate: jest.fn(() =>
+        Promise.resolve({ status: 'NOT_REQUIRED', isConsentFormAvailable: false }),
+      ),
+      loadAndShowConsentFormIfRequired: jest.fn(() =>
+        Promise.resolve({ status: 'NOT_REQUIRED' }),
+      ),
+      showForm: jest.fn(() => Promise.resolve({ status: 'OBTAINED' })),
+      showPrivacyOptionsForm: jest.fn(() => Promise.resolve({ status: 'OBTAINED' })),
+      getConsentInfo: jest.fn(() =>
+        Promise.resolve({ status: 'NOT_REQUIRED', isConsentFormAvailable: false }),
+      ),
+      reset: jest.fn(),
+    },
+    AdsConsentStatus: {
+      UNKNOWN: 'UNKNOWN',
+      REQUIRED: 'REQUIRED',
+      NOT_REQUIRED: 'NOT_REQUIRED',
+      OBTAINED: 'OBTAINED',
+    },
+    AdsConsentDebugGeography: {
+      DISABLED: 0,
+      EEA: 1,
+      NOT_EEA: 2,
+      REGULATED_US_STATE: 3,
+      OTHER: 4,
+    },
+    MaxAdContentRating: {
+      G: 'G',
+      PG: 'PG',
+      T: 'T',
+      MA: 'MA',
+    },
+    TestIds: {
+      BANNER: 'ca-app-pub-3940256099942544/6300978111',
+      INTERSTITIAL: 'ca-app-pub-3940256099942544/1033173712',
+      REWARDED: 'ca-app-pub-3940256099942544/5224354917',
+      ADAPTIVE_BANNER: 'ca-app-pub-3940256099942544/9214589741',
+      APP_OPEN: 'ca-app-pub-3940256099942544/9257395921',
+    },
+    BannerAd: (props: Record<string, unknown>) =>
+      React.createElement(View, { testID: 'mock-banner-ad', ...props }),
+    BannerAdSize: {
+      ANCHORED_ADAPTIVE_BANNER: 'ANCHORED_ADAPTIVE_BANNER',
+      BANNER: 'BANNER',
+      LARGE_BANNER: 'LARGE_BANNER',
+      MEDIUM_RECTANGLE: 'MEDIUM_RECTANGLE',
+      FULL_BANNER: 'FULL_BANNER',
+      LEADERBOARD: 'LEADERBOARD',
+      SMART_BANNER: 'SMART_BANNER',
+    },
+    InterstitialAd: {
+      createForAdRequest: jest.fn(() => ({
+        load: jest.fn(),
+        show: jest.fn(),
+        addAdEventListener: jest.fn(() => jest.fn()),
+        addAdEventsListener: jest.fn(() => jest.fn()),
+        removeAllListeners: jest.fn(),
+      })),
+    },
+    RewardedAd: {
+      createForAdRequest: jest.fn(() => ({
+        load: jest.fn(),
+        show: jest.fn(),
+        addAdEventListener: jest.fn(() => jest.fn()),
+      })),
+    },
+    AppOpenAd: {
+      createForAdRequest: jest.fn(() => ({
+        load: jest.fn(),
+        show: jest.fn(),
+        addAdEventListener: jest.fn(() => jest.fn()),
+      })),
+    },
+    AdEventType: { LOADED: 'loaded', ERROR: 'error', CLOSED: 'closed', OPENED: 'opened' },
+    RewardedAdEventType: { LOADED: 'rewarded_loaded', EARNED_REWARD: 'rewarded_earned_reward' },
+  };
+});
+
+// ---------------------------------------------------------------
+// expo-tracking-transparency (Phase E Sprint 1 AD-04 iOS ATT)
+// ---------------------------------------------------------------
+jest.mock('expo-tracking-transparency', () => ({
+  requestTrackingPermissionsAsync: jest.fn(() =>
+    Promise.resolve({ status: 'granted', granted: true, canAskAgain: true }),
+  ),
+  getTrackingPermissionsAsync: jest.fn(() =>
+    Promise.resolve({ status: 'granted', granted: true, canAskAgain: true }),
+  ),
+}));
+
+// ---------------------------------------------------------------
 // expo-router の router 関数を mock
 // useLocalSearchParams 等は各テストで個別に呼び出し時 mock する
 // ---------------------------------------------------------------
